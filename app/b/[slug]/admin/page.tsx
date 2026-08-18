@@ -3,18 +3,23 @@
 import { use, useEffect, useState } from "react";
 import { useBoard } from "@/lib/useBoard";
 import { apiFetch, fileToDataUrl } from "@/lib/api";
-import type { Asset, Board, Category, Member } from "@/lib/types";
+import type { Asset, Board, Category, Member, OD } from "@/lib/types";
 
 export default function AdminPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { board, refetch } = useBoard(slug);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [pendingOds, setPendingOds] = useState<OD[]>([]);
 
   async function loadAssets() {
     setAssets(await apiFetch<Asset[]>(`/api/boards/${slug}/assets`));
   }
+  async function loadPendingOds() {
+    setPendingOds(await apiFetch<OD[]>(`/api/boards/${slug}/ods?status=PENDING`));
+  }
   useEffect(() => {
     loadAssets();
+    loadPendingOds();
   }, [slug]);
 
   if (!board) return null;
@@ -25,6 +30,10 @@ export default function AdminPage({ params }: { params: Promise<{ slug: string }
 
       <Section title="Members">
         <MemberList slug={slug} members={board.members} onChange={refetch} />
+      </Section>
+
+      <Section title="Pending ODs">
+        <PendingOdList ods={pendingOds} onChange={loadPendingOds} />
       </Section>
 
       <Section title="Categories">
@@ -114,6 +123,52 @@ function MemberList({
           Add
         </button>
       </form>
+    </div>
+  );
+}
+
+function PendingOdList({ ods, onChange }: { ods: OD[]; onChange: () => void }) {
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function close(id: string) {
+    setBusyId(id);
+    try {
+      await apiFetch(`/api/ods/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ action: "close" }),
+      });
+      onChange();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (ods.length === 0) {
+    return <p className="text-sm text-zinc-500">No pending ODs.</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {ods.map((od) => (
+        <div
+          key={od.id}
+          className="flex items-center justify-between gap-4 rounded-md border border-zinc-200 px-4 py-2 dark:border-zinc-800"
+        >
+          <div>
+            <p className="text-sm">
+              <strong>{od.raisedBy.name}</strong> vs <strong>{od.accused.name}</strong> — {od.category.name}
+            </p>
+            <p className="text-xs text-zinc-500">{od.description}</p>
+          </div>
+          <button
+            onClick={() => close(od.id)}
+            disabled={busyId === od.id}
+            className="shrink-0 rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium"
+          >
+            Close now
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

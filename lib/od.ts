@@ -22,6 +22,25 @@ export async function closeExpiredOds(boardId: string) {
   return expired.length;
 }
 
+// Admin-triggered early closure: scores a still-PENDING OD from whatever
+// votes it has accumulated so far, without waiting for closesAt.
+export async function closeOdNow(odId: string) {
+  const od = await prisma.oD.findUnique({
+    where: { id: odId },
+    include: { votes: true, category: true },
+  });
+  if (!od) return null;
+  if (od.status === "CLOSED") return od;
+
+  const rule = parseScoringRule(od.category.scoringRule);
+  const finalScore = computeFinalScore(od.votes, rule);
+  return prisma.oD.update({
+    where: { id: odId },
+    data: { status: "CLOSED", finalScore },
+    include: { raisedBy: true, accused: true, category: true, votes: true },
+  });
+}
+
 export async function getLeaderboard(boardId: string) {
   const [members, closedOds] = await Promise.all([
     prisma.member.findMany({ where: { boardId } }),
