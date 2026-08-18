@@ -1,0 +1,103 @@
+// Oddy Board data model — kept intentionally small (see PRD section 29).
+// Leaderboard scores are derived by summing OD.finalScore per accused member;
+// no separate Score table is maintained to avoid a second source of truth.
+// SQLite has no native enum support, so status/vote/severity are validated
+// strings (allowed values documented alongside each field).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Board {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  createdBy           String
+  votingDurationHours Int      @default(24)
+  dailyOdLimit        Int      @default(3)
+  createdAt           DateTime @default(now())
+
+  members    Member[]
+  categories Category[]
+  ods        OD[]
+}
+
+model Member {
+  id      String  @id @default(cuid())
+  boardId String
+  name    String
+  image   String?
+  board   Board   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  raisedOds  OD[]   @relation("RaisedBy")
+  accusedOds OD[]   @relation("Accused")
+  votes      Vote[]
+
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id      String @id @default(cuid())
+  boardId String
+  name    String
+  // JSON string, e.g. {"OD":10,"SMALL_OD":5,"REJECT":0}
+  scoringRule String
+  board       Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  ods    OD[]
+  assets Asset[]
+
+  createdAt DateTime @default(now())
+}
+
+model OD {
+  id          String   @id @default(cuid())
+  boardId     String
+  raisedById  String
+  accusedId   String
+  categoryId  String
+  description String
+  evidence    String?
+  // "PENDING" | "CLOSED"
+  status      String   @default("PENDING")
+  finalScore  Int?
+  createdAt   DateTime @default(now())
+  closesAt    DateTime
+
+  board    Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  raisedBy Member   @relation("RaisedBy", fields: [raisedById], references: [id])
+  accused  Member   @relation("Accused", fields: [accusedId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+  votes    Vote[]
+}
+
+model Vote {
+  id       String @id @default(cuid())
+  odId     String
+  memberId String
+  // "OD" | "SMALL_OD" | "REJECT"
+  vote      String
+  createdAt DateTime @default(now())
+
+  od     OD     @relation(fields: [odId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id])
+
+  @@unique([odId, memberId])
+}
+
+model Asset {
+  id         String  @id @default(cuid())
+  categoryId String
+  file       String?
+  dialogue   String?
+  // "MILD" | "MEDIUM" | "SEVERE" | null
+  severity  String?
+  createdAt DateTime @default(now())
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
