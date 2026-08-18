@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { saveDataUrl } from "@/lib/upload";
+import { validateImageDataUrl } from "@/lib/upload";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -13,7 +13,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   let image: string | undefined;
   if (typeof body.imageDataUrl === "string" && body.imageDataUrl) {
-    image = await saveDataUrl(body.imageDataUrl, "member");
+    try {
+      image = validateImageDataUrl(body.imageDataUrl);
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    }
   }
 
   const member = await prisma.member.create({

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { closeExpiredOds } from "@/lib/od";
-import { saveDataUrl } from "@/lib/upload";
+import { validateImageDataUrl } from "@/lib/upload";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -53,7 +53,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   let evidence: string | undefined;
   if (typeof body.evidenceDataUrl === "string" && body.evidenceDataUrl) {
-    evidence = await saveDataUrl(body.evidenceDataUrl, "evidence");
+    try {
+      evidence = validateImageDataUrl(body.evidenceDataUrl);
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    }
   }
 
   const od = await prisma.oD.create({

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { saveDataUrl } from "@/lib/upload";
+import { validateImageDataUrl } from "@/lib/upload";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -30,7 +30,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   let file: string | undefined;
   if (typeof body.fileDataUrl === "string" && body.fileDataUrl) {
-    file = await saveDataUrl(body.fileDataUrl, "asset");
+    try {
+      file = validateImageDataUrl(body.fileDataUrl);
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    }
   }
 
   if (!file && !dialogue) {

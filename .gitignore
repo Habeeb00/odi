@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -47,7 +48,3 @@ next-env.d.ts
 /.claude/
 /.windsurf/
 skills-lock.json
-
-# sqlite dev db
-/prisma/dev.db
-/prisma/dev.db-journal

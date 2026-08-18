@@ -7,13 +7,36 @@ update. See the full product spec in the project's PRD.
 ## Stack
 
 - Next.js (App Router, TypeScript, Tailwind)
-- Prisma + SQLite
+- Prisma + PostgreSQL
+- Images (member photos, evidence, category assets) are stored as `data:`
+  URLs directly in the database — no filesystem writes, so it runs the same
+  locally and on serverless hosts.
 
-## Getting started
+## Deploy (Vercel)
+
+1. [Deploy to Vercel](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FHabeeb00%2Fodi%2Ftree%2Fclaude%2Foddy-board-prd-t2wuxs&project-name=oddy-board&repository-name=oddy-board) and sign in with GitHub.
+2. On the "Configure Project" screen, add an environment variable
+   `DATABASE_URL` pointing at any Postgres database (see below for a free
+   one). Deploy.
+3. If you add the database *after* the first deploy: open the project →
+   **Storage** tab → **Create Database** → Postgres, connect it to the
+   project, then copy its connection string into a `DATABASE_URL` env var
+   (Settings → Environment Variables) and hit **Redeploy**.
+
+The build runs `prisma db push` automatically, so the schema is created on
+first deploy — no manual migration step.
+
+**Free Postgres options** if you don't already have one: Vercel's own
+Postgres/Neon integration (Storage tab, no separate signup), or
+[neon.tech](https://neon.tech) / [supabase.com](https://supabase.com)
+directly.
+
+## Local development
 
 ```bash
 npm install
-npx prisma migrate dev   # creates prisma/dev.db
+# set DATABASE_URL in .env to a Postgres connection string
+npx prisma db push
 npm run dev
 ```
 

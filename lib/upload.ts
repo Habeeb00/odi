@@ -1,25 +1,17 @@
-import { promises as fs } from "fs";
-import path from "path";
+const MAX_DATA_URL_BYTES = 3 * 1024 * 1024; // ~3MB, comfortably under Postgres text column limits
 
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
+const ALLOWED_MIME = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
-const EXT_BY_MIME: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-  "image/gif": "gif",
-};
-
-// Accepts a data: URL (from a <input type="file"> read client-side) and
-// writes it to /public/uploads, returning the public path to store on the
-// record. Kept deliberately simple — no object storage for V1.
-export async function saveDataUrl(dataUrl: string, prefix: string): Promise<string> {
-  const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
-  if (!match) throw new Error("Invalid data URL");
-  const [, mime, base64] = match;
-  const ext = EXT_BY_MIME[mime] ?? "bin";
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  const filename = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  await fs.writeFile(path.join(UPLOAD_DIR, filename), Buffer.from(base64, "base64"));
-  return `/uploads/${filename}`;
+// Images are stored as data: URLs directly in the database (no filesystem
+// writes) so uploads work identically in serverless deployments — the app
+// stays a single stateless process talking to one Postgres database.
+export function validateImageDataUrl(dataUrl: string): string {
+  const match = /^data:([^;]+);base64,/.exec(dataUrl);
+  if (!match || !ALLOWED_MIME.has(match[1])) {
+    throw new Error("Unsupported image type");
+  }
+  if (dataUrl.length > MAX_DATA_URL_BYTES) {
+    throw new Error("Image is too large (max ~2MB)");
+  }
+  return dataUrl;
 }
