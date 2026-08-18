@@ -6,6 +6,7 @@ import { validateImageDataUrl } from "@/lib/upload";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const status = req.nextUrl.searchParams.get("status"); // "PENDING" | "CLOSED" | null
+  const accusedId = req.nextUrl.searchParams.get("accusedId");
 
   const board = await prisma.board.findUnique({ where: { slug } });
   if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
@@ -13,7 +14,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   await closeExpiredOds(board.id);
 
   const ods = await prisma.oD.findMany({
-    where: { boardId: board.id, ...(status ? { status } : {}) },
+    where: {
+      boardId: board.id,
+      ...(status ? { status } : {}),
+      ...(accusedId ? { accusedId } : {}),
+    },
     include: { raisedBy: true, accused: true, category: true, votes: true },
     orderBy: { createdAt: "desc" },
   });
