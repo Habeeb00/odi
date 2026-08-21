@@ -17,6 +17,13 @@ model Board {
   id                  String   @id @default(cuid())
   name                String
   slug                String   @unique
+  // Short invite code the creator shares with others so only people who
+  // have it can join the room. Independent from `slug` (which is used for
+  // the URL) so the two can be rotated/rethought separately later.
+  // Nullable so existing boards created before this field don't break
+  // migration; new boards always get one, older ones can generate one
+  // from the admin settings.
+  joinCode            String?  @unique
   createdBy           String
   votingDurationHours Int      @default(24)
   dailyOdLimit        Int      @default(3)

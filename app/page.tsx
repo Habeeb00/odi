@@ -10,9 +10,12 @@ export default function Home() {
   const [name, setName] = useState("");
   const [createdBy, setCreatedBy] = useState("");
   const [members, setMembers] = useState("");
-  const [joinSlug, setJoinSlug] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [createdBoard, setCreatedBoard] = useState<Board | null>(null);
 
   async function createBoard(e: React.FormEvent) {
     e.preventDefault();
@@ -27,7 +30,7 @@ export default function Home() {
         method: "POST",
         body: JSON.stringify({ name, createdBy, memberNames }),
       });
-      router.push(`/b/${board.slug}`);
+      setCreatedBoard(board);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -35,10 +38,41 @@ export default function Home() {
     }
   }
 
-  function joinBoard(e: React.FormEvent) {
+  async function joinBoard(e: React.FormEvent) {
     e.preventDefault();
-    const slug = joinSlug.trim().replace(/^.*\/b\//, "").replace(/\/.*$/, "");
-    if (slug) router.push(`/b/${slug}`);
+    setJoinError(null);
+    setJoining(true);
+    try {
+      const { slug } = await apiFetch<{ slug: string }>("/api/boards/join", {
+        method: "POST",
+        body: JSON.stringify({ code: joinCode }),
+      });
+      router.push(`/b/${slug}`);
+    } catch (err) {
+      setJoinError(err instanceof Error ? err.message : "Couldn't join that board");
+    } finally {
+      setJoining(false);
+    }
+  }
+
+  if (createdBoard) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 px-6 py-16">
+        <h1 className="text-2xl font-bold">Board created 🎉</h1>
+        <p className="text-zinc-500">
+          Share this join code with your group so they can join <strong>{createdBoard.name}</strong>.
+        </p>
+        <div className="rounded-md border border-zinc-300 px-4 py-6 text-center font-mono text-3xl font-bold tracking-widest dark:border-zinc-700">
+          {createdBoard.joinCode}
+        </div>
+        <button
+          onClick={() => router.push(`/b/${createdBoard.slug}`)}
+          className="rounded-md bg-black px-4 py-3 font-semibold text-white dark:bg-white dark:text-black"
+        >
+          Enter board
+        </button>
+      </main>
+    );
   }
 
   return (
@@ -92,15 +126,20 @@ export default function Home() {
         </h2>
         <form onSubmit={joinBoard} className="flex gap-2">
           <input
-            className="flex-1 border-b border-zinc-300 bg-transparent py-2 text-lg outline-none focus:border-black dark:focus:border-white"
-            placeholder="Board link or slug"
-            value={joinSlug}
-            onChange={(e) => setJoinSlug(e.target.value)}
+            className="flex-1 border-b border-zinc-300 bg-transparent py-2 text-lg uppercase outline-none focus:border-black dark:focus:border-white"
+            placeholder="Join code (e.g. AB12CD)"
+            value={joinCode}
+            onChange={(e) => setJoinCode(e.target.value)}
           />
-          <button type="submit" className="rounded-md border border-zinc-300 px-4 py-2 font-medium">
-            Join
+          <button
+            type="submit"
+            disabled={joining}
+            className="rounded-md border border-zinc-300 px-4 py-2 font-medium disabled:opacity-50"
+          >
+            {joining ? "Joining..." : "Join"}
           </button>
         </form>
+        {joinError && <p className="text-sm text-red-600">{joinError}</p>}
       </section>
     </main>
   );

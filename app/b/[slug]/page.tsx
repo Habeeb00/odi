@@ -51,6 +51,11 @@ export default function BoardHome({ params }: { params: Promise<{ slug: string }
         <div>
           <p className="text-sm text-zinc-500">Share this board</p>
           <p className="font-mono text-sm">{shareUrl}</p>
+          {board?.joinCode && (
+            <p className="mt-1 text-sm text-zinc-500">
+              Join code: <span className="font-mono font-bold tracking-widest">{board.joinCode}</span>
+            </p>
+          )}
         </div>
         <button
           onClick={() => shareUrl && navigator.clipboard.writeText(shareUrl)}

@@ -77,10 +77,13 @@ function MemberList({
   const [name, setName] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
+    setError(null);
     try {
       const imageDataUrl = image ? await fileToDataUrl(image) : undefined;
       await apiFetch(`/api/boards/${slug}/members`, {
@@ -90,26 +93,76 @@ function MemberList({
       setName("");
       setImage(null);
       onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add member");
     } finally {
       setBusy(false);
     }
   }
 
   async function remove(id: string) {
-    await apiFetch(`/api/boards/${slug}/members/${id}`, { method: "DELETE" });
-    onChange();
+    try {
+      await apiFetch(`/api/boards/${slug}/members/${id}`, { method: "DELETE" });
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove member");
+    }
+  }
+
+  async function setPhoto(id: string, file: File) {
+    setPhotoBusyId(id);
+    setError(null);
+    try {
+      const imageDataUrl = await fileToDataUrl(file);
+      await apiFetch(`/api/boards/${slug}/members/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ imageDataUrl }),
+      });
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update photo");
+    } finally {
+      setPhotoBusyId(null);
+    }
   }
 
   return (
     <div className="flex flex-col gap-3">
       {members.map((m) => (
         <div key={m.id} className="flex items-center justify-between rounded-md border border-zinc-200 px-4 py-2 dark:border-zinc-800">
-          <span>{m.name}</span>
-          <button onClick={() => remove(m.id)} className="text-sm text-red-600">
-            Remove
-          </button>
+          <div className="flex items-center gap-3">
+            {m.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={m.image} alt="" className="h-8 w-8 rounded-full object-cover" />
+            ) : (
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs dark:bg-zinc-800">
+                {m.name[0]?.toUpperCase()}
+              </span>
+            )}
+            <span>{m.name}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-zinc-500 underline cursor-pointer">
+              {photoBusyId === m.id ? "Uploading..." : "Change photo"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={photoBusyId === m.id}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) setPhoto(m.id, file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <button onClick={() => remove(m.id)} className="text-sm text-red-600">
+              Remove
+            </button>
+          </div>
         </div>
       ))}
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <form onSubmit={add} className="flex flex-wrap items-center gap-2">
         <input
           className="flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2"
@@ -183,15 +236,21 @@ function CategoryList({
   onChange: () => void;
 }) {
   const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    await apiFetch(`/api/boards/${slug}/categories`, {
-      method: "POST",
-      body: JSON.stringify({ name }),
-    });
-    setName("");
-    onChange();
+    setError(null);
+    try {
+      await apiFetch(`/api/boards/${slug}/categories`, {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
+      setName("");
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add category");
+    }
   }
 
   return (
@@ -203,6 +262,7 @@ function CategoryList({
           </li>
         ))}
       </ul>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <form onSubmit={add} className="flex gap-2">
         <input
           className="flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2"
@@ -334,41 +394,79 @@ function SettingsForm({
   const [votingDurationHours, setVotingDurationHours] = useState(board.votingDurationHours);
   const [dailyOdLimit, setDailyOdLimit] = useState(board.dailyOdLimit);
   const [saved, setSaved] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    await apiFetch(`/api/boards/${slug}`, {
-      method: "PATCH",
-      body: JSON.stringify({ votingDurationHours, dailyOdLimit }),
-    });
-    setSaved(true);
-    onChange();
+    setError(null);
+    try {
+      await apiFetch(`/api/boards/${slug}`, {
+        method: "PATCH",
+        body: JSON.stringify({ votingDurationHours, dailyOdLimit }),
+      });
+      setSaved(true);
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save settings");
+    }
+  }
+
+  async function regenerateJoinCode() {
+    setRegenerating(true);
+    setError(null);
+    try {
+      await apiFetch(`/api/boards/${slug}`, {
+        method: "PATCH",
+        body: JSON.stringify({ regenerateJoinCode: true }),
+      });
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate join code");
+    } finally {
+      setRegenerating(false);
+    }
   }
 
   return (
-    <form onSubmit={save} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-      <label className="flex flex-col gap-1">
-        <span className="text-sm">Voting duration (hours)</span>
-        <input
-          type="number"
-          min={1}
-          value={votingDurationHours}
-          onChange={(e) => setVotingDurationHours(Number(e.target.value))}
-          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span className="text-sm">Daily OD limit per member</span>
-        <input
-          type="number"
-          min={1}
-          value={dailyOdLimit}
-          onChange={(e) => setDailyOdLimit(Number(e.target.value))}
-          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
-        />
-      </label>
-      <button className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium">Save</button>
-      {saved && <span className="text-sm text-zinc-500">Saved.</span>}
-    </form>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+        <span className="text-sm">Join code:</span>
+        <span className="font-mono font-bold tracking-widest">{board.joinCode ?? "not set"}</span>
+        <button
+          onClick={regenerateJoinCode}
+          disabled={regenerating}
+          className="ml-auto rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+        >
+          {regenerating ? "Generating..." : board.joinCode ? "Regenerate" : "Generate"}
+        </button>
+      </div>
+
+      <form onSubmit={save} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <label className="flex flex-col gap-1">
+          <span className="text-sm">Voting duration (hours)</span>
+          <input
+            type="number"
+            min={1}
+            value={votingDurationHours}
+            onChange={(e) => setVotingDurationHours(Number(e.target.value))}
+            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-sm">Daily OD limit per member</span>
+          <input
+            type="number"
+            min={1}
+            value={dailyOdLimit}
+            onChange={(e) => setDailyOdLimit(Number(e.target.value))}
+            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
+          />
+        </label>
+        <button className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium">Save</button>
+        {saved && <span className="text-sm text-zinc-500">Saved.</span>}
+      </form>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+    </div>
   );
 }

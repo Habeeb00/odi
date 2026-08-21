@@ -16,6 +16,7 @@ export type Board = {
   id: string;
   name: string;
   slug: string;
+  joinCode: string | null;
   createdBy: string;
   votingDurationHours: number;
   dailyOdLimit: number;
