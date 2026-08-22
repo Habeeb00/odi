@@ -129,13 +129,13 @@ function MemberList({
   return (
     <div className="flex flex-col gap-3">
       {members.map((m) => (
-        <div key={m.id} className="flex items-center justify-between rounded-md border border-zinc-200 px-4 py-2 dark:border-zinc-800">
+        <div key={m.id} className="flex items-center justify-between rounded-md border border-zinc-200 px-4 py-2">
           <div className="flex items-center gap-3">
             {m.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={m.image} alt="" className="h-8 w-8 rounded-full object-cover" />
             ) : (
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs dark:bg-zinc-800">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs">
                 {m.name[0]?.toUpperCase()}
               </span>
             )}
@@ -205,7 +205,7 @@ function PendingOdList({ ods, onChange }: { ods: OD[]; onChange: () => void }) {
       {ods.map((od) => (
         <div
           key={od.id}
-          className="flex items-center justify-between gap-4 rounded-md border border-zinc-200 px-4 py-2 dark:border-zinc-800"
+          className="flex items-center justify-between gap-4 rounded-md border border-zinc-200 px-4 py-2"
         >
           <div>
             <p className="text-sm">
@@ -328,7 +328,7 @@ function AssetManager({
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         {assets.map((a) => (
-          <div key={a.id} className="flex flex-col gap-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+          <div key={a.id} className="flex flex-col gap-2 rounded-md border border-zinc-200 p-3">
             {a.file && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={a.file} alt="" className="h-32 w-full rounded-md object-cover" />
@@ -344,7 +344,7 @@ function AssetManager({
         ))}
       </div>
 
-      <form onSubmit={add} className="flex flex-col gap-2 rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
+      <form onSubmit={add} className="flex flex-col gap-2 rounded-md border border-zinc-200 p-4">
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
@@ -430,7 +430,7 @@ function SettingsForm({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+      <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-4 py-3">
         <span className="text-sm">Join code:</span>
         <span className="font-mono font-bold tracking-widest">{board.joinCode ?? "not set"}</span>
         <button

@@ -62,12 +62,12 @@ export default function Home() {
         <p className="text-zinc-500">
           Share this join code with your group so they can join <strong>{createdBoard.name}</strong>.
         </p>
-        <div className="rounded-md border border-zinc-300 px-4 py-6 text-center font-mono text-3xl font-bold tracking-widest dark:border-zinc-700">
+        <div className="rounded-md border border-zinc-300 px-4 py-6 text-center font-mono text-3xl font-bold tracking-widest">
           {createdBoard.joinCode}
         </div>
         <button
           onClick={() => router.push(`/b/${createdBoard.slug}`)}
-          className="rounded-md bg-black px-4 py-3 font-semibold text-white dark:bg-white dark:text-black"
+          className="rounded-md bg-black px-4 py-3 font-semibold text-white"
         >
           Enter board
         </button>
@@ -90,21 +90,21 @@ export default function Home() {
         </h2>
         <form onSubmit={createBoard} className="flex flex-col gap-3">
           <input
-            className="border-b border-zinc-300 bg-transparent py-2 text-lg outline-none focus:border-black dark:focus:border-white"
+            className="border-b border-zinc-300 bg-transparent py-2 text-lg outline-none focus:border-black"
             placeholder="Board name (e.g. The Gang)"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
           <input
-            className="border-b border-zinc-300 bg-transparent py-2 text-lg outline-none focus:border-black dark:focus:border-white"
+            className="border-b border-zinc-300 bg-transparent py-2 text-lg outline-none focus:border-black"
             placeholder="Your name"
             value={createdBy}
             onChange={(e) => setCreatedBy(e.target.value)}
             required
           />
           <input
-            className="border-b border-zinc-300 bg-transparent py-2 text-lg outline-none focus:border-black dark:focus:border-white"
+            className="border-b border-zinc-300 bg-transparent py-2 text-lg outline-none focus:border-black"
             placeholder="Member names, comma separated"
             value={members}
             onChange={(e) => setMembers(e.target.value)}
@@ -113,7 +113,7 @@ export default function Home() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 rounded-md bg-black px-4 py-3 font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-black"
+            className="mt-2 rounded-md bg-black px-4 py-3 font-semibold text-white disabled:opacity-50"
           >
             {loading ? "Creating..." : "Create board"}
           </button>
@@ -126,7 +126,7 @@ export default function Home() {
         </h2>
         <form onSubmit={joinBoard} className="flex gap-2">
           <input
-            className="flex-1 border-b border-zinc-300 bg-transparent py-2 text-lg uppercase outline-none focus:border-black dark:focus:border-white"
+            className="flex-1 border-b border-zinc-300 bg-transparent py-2 text-lg uppercase outline-none focus:border-black"
             placeholder="Join code (e.g. AB12CD)"
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value)}

@@ -51,7 +51,7 @@ export default function BoardLayout({
   return (
     <div className="flex min-h-screen flex-col">
       {!isDisplay && (
-        <header className="border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
+        <header className="border-b border-zinc-200 px-6 py-4">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
             <Link href={`/b/${slug}`} className="text-lg font-bold">
               {board.name}
@@ -64,7 +64,7 @@ export default function BoardLayout({
                   <Link
                     key={t.href}
                     href={href}
-                    className={active ? "font-semibold underline" : "text-zinc-500 hover:text-black dark:hover:text-white"}
+                    className={active ? "font-semibold underline" : "text-zinc-500 hover:text-black"}
                   >
                     {t.label}
                   </Link>
@@ -116,7 +116,7 @@ function IdentityPicker({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
-      <div className="w-full max-w-sm rounded-lg bg-white p-6 dark:bg-zinc-900">
+      <div className="w-full max-w-sm rounded-lg bg-white p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">Who are you?</h2>
           {canClose && (
@@ -136,7 +136,7 @@ function IdentityPicker({
                 setIdentity(slug, m.id);
                 onPicked(m.id);
               }}
-              className="rounded-md border border-zinc-200 px-4 py-3 text-left font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+              className="rounded-md border border-zinc-200 px-4 py-3 text-left font-medium hover:bg-zinc-50"
             >
               {m.name}
             </button>

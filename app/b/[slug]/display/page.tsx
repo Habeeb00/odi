@@ -120,7 +120,7 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
   }, [slug]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-white p-10 dark:bg-black">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-white p-10">
       {screen === "leaderboard" && <Leaderboard boardName={boardName} entries={leaderboard} pendingCount={pendingCount} />}
       {screen === "detected" && activeOd && <Detected od={activeOd} />}
       {screen === "pending" && activeOd && <PendingCase od={activeOd} />}
@@ -150,14 +150,14 @@ function Leaderboard({
       <div className="mt-12 flex flex-col gap-6">
         {entries.map((m, i) => (
           <div key={m.id} className="flex items-center gap-6">
-            <span className="w-10 text-right text-3xl font-black text-zinc-300 dark:text-zinc-700">
+            <span className="w-10 text-right text-3xl font-black text-zinc-300">
               {i + 1}
             </span>
             {m.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={m.image} alt={m.name} className="h-20 w-20 rounded-full object-cover" />
             ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200 text-2xl font-bold dark:bg-zinc-800">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200 text-2xl font-bold">
                 {m.name[0]?.toUpperCase()}
               </div>
             )}
@@ -166,9 +166,9 @@ function Leaderboard({
                 <span className="text-2xl font-bold">{m.name}</span>
                 <span className="font-mono text-2xl">{m.score}</span>
               </div>
-              <div className="mt-2 h-4 w-full rounded-full bg-zinc-100 dark:bg-zinc-900">
+              <div className="mt-2 h-4 w-full rounded-full bg-zinc-100">
                 <div
-                  className="h-4 rounded-full bg-black transition-all duration-1000 ease-out dark:bg-white"
+                  className="h-4 rounded-full bg-black transition-all duration-1000 ease-out"
                   style={{ width: `${(Math.max(m.score, 0) / max) * 100}%` }}
                 />
               </div>
@@ -200,7 +200,7 @@ function PendingCase({ od }: { od: OdWithAsset }) {
         OD Under Investigation
       </p>
       <h1 className="text-4xl font-black">{od.accused.name}</h1>
-      <p className="text-xl text-zinc-700 dark:text-zinc-300">{od.description}</p>
+      <p className="text-xl text-zinc-700">{od.description}</p>
       {od.asset?.file && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={od.asset.file} alt="" className="max-h-72 rounded-md" />
@@ -224,7 +224,7 @@ function Verdict({ od }: { od: OdWithAsset }) {
     <div className="flex w-full max-w-2xl flex-col items-center gap-5 text-center">
       <p className="text-sm font-semibold uppercase tracking-widest text-zinc-500">OD Court</p>
       <h1 className="text-4xl font-black">{od.accused.name}</h1>
-      <p className="text-lg text-zinc-600 dark:text-zinc-400">{od.description}</p>
+      <p className="text-lg text-zinc-600">{od.description}</p>
       {od.asset?.file && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={od.asset.file} alt="" className="max-h-72 rounded-md" />

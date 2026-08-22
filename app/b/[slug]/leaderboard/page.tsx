@@ -38,7 +38,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ slug: st
               // eslint-disable-next-line @next/next/no-img-element
               <img src={m.image} alt={m.name} className="h-12 w-12 rounded-full object-cover" />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-200 text-lg font-bold dark:bg-zinc-800">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-200 text-lg font-bold">
                 {m.name[0]?.toUpperCase()}
               </div>
             )}
@@ -49,9 +49,9 @@ export default function LeaderboardPage({ params }: { params: Promise<{ slug: st
                 </span>
                 <span className="font-mono text-sm text-zinc-500">{m.score}</span>
               </div>
-              <div className="mt-1 h-2 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
+              <div className="mt-1 h-2 w-full rounded-full bg-zinc-100">
                 <div
-                  className="h-2 rounded-full bg-black transition-all duration-700 dark:bg-white"
+                  className="h-2 rounded-full bg-black transition-all duration-700"
                   style={{ width: `${(Math.max(m.score, 0) / max) * 100}%` }}
                 />
               </div>
@@ -90,7 +90,7 @@ function MemberOdsModal({
       onClick={onClose}
     >
       <div
-        className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 dark:bg-zinc-900"
+        className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -109,13 +109,13 @@ function MemberOdsModal({
             {ods.map((od) => (
               <li
                 key={od.id}
-                className="rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-800"
+                className="rounded-md border border-zinc-200 p-3 text-sm"
               >
                 <div className="flex items-baseline justify-between">
                   <span className="font-semibold">{od.category.name}</span>
                   <span className="font-mono text-zinc-500">+{od.finalScore ?? 0}</span>
                 </div>
-                <p className="mt-1 text-zinc-600 dark:text-zinc-400">{od.description}</p>
+                <p className="mt-1 text-zinc-600">{od.description}</p>
                 <p className="mt-1 text-xs text-zinc-500">
                   Raised by {od.raisedBy.name} &middot;{" "}
                   {new Date(od.createdAt).toLocaleDateString()}

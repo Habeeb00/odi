@@ -128,7 +128,7 @@ export default function RaiseOD({ params }: { params: Promise<{ slug: string }> 
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 rounded-md bg-black px-4 py-3 font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-black"
+          className="mt-2 rounded-md bg-black px-4 py-3 font-semibold text-white disabled:opacity-50"
         >
           {submitting ? "Submitting..." : "Submit OD"}
         </button>

@@ -47,7 +47,7 @@ export default function BoardHome({ params }: { params: Promise<{ slug: string }
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 p-4">
         <div>
           <p className="text-sm text-zinc-500">Share this board</p>
           <p className="font-mono text-sm">{shareUrl}</p>
@@ -66,7 +66,7 @@ export default function BoardHome({ params }: { params: Promise<{ slug: string }
       </div>
 
       <h1 className="text-2xl font-bold">OD under investigation</h1>
-      {message && <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{message}</p>}
+      {message && <p className="mt-2 text-sm text-zinc-600">{message}</p>}
 
       {ods.length === 0 && (
         <p className="mt-6 text-zinc-500">No pending cases. All quiet on the chathi front.</p>
@@ -77,10 +77,10 @@ export default function BoardHome({ params }: { params: Promise<{ slug: string }
           const myVote = od.votes.find((v) => v.memberId === memberId);
           const canVote = memberId && memberId !== od.accusedId;
           return (
-            <div key={od.id} className="rounded-md border border-zinc-200 p-5 dark:border-zinc-800">
+            <div key={od.id} className="rounded-md border border-zinc-200 p-5">
               <p className="text-xs uppercase tracking-wide text-zinc-500">{od.category.name}</p>
               <h2 className="mt-1 text-xl font-bold">{od.accused.name}</h2>
-              <p className="mt-1 text-zinc-700 dark:text-zinc-300">{od.description}</p>
+              <p className="mt-1 text-zinc-700">{od.description}</p>
               {od.evidence && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={od.evidence} alt="evidence" className="mt-3 max-h-64 rounded-md" />
@@ -103,7 +103,7 @@ export default function BoardHome({ params }: { params: Promise<{ slug: string }
                       onClick={() => vote(od.id, choice)}
                       className={`rounded-md border px-4 py-2 text-sm font-semibold ${
                         myVote?.vote === choice
-                          ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
+                          ? "border-black bg-black text-white"
                           : "border-zinc-300"
                       }`}
                     >
