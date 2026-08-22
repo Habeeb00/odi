@@ -155,9 +155,9 @@ function Leaderboard({
             </span>
             {m.image ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.image} alt={m.name} className="h-20 w-20 rounded-full object-cover" />
+              <img src={m.image} alt={m.name} className="h-20 w-20 object-contain" />
             ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200 text-2xl font-bold">
+              <div className="flex h-20 w-20 items-center justify-center bg-zinc-200 text-2xl font-bold">
                 {m.name[0]?.toUpperCase()}
               </div>
             )}

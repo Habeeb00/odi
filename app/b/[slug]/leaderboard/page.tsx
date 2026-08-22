@@ -36,9 +36,9 @@ export default function LeaderboardPage({ params }: { params: Promise<{ slug: st
             <span className="w-6 text-right text-lg font-bold text-zinc-400">{i + 1}</span>
             {m.image ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.image} alt={m.name} className="h-12 w-12 rounded-full object-cover" />
+              <img src={m.image} alt={m.name} className="h-12 w-12 object-contain" />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-200 text-lg font-bold">
+              <div className="flex h-12 w-12 items-center justify-center bg-zinc-200 text-lg font-bold">
                 {m.name[0]?.toUpperCase()}
               </div>
             )}

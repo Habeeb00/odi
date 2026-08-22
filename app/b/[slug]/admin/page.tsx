@@ -133,9 +133,9 @@ function MemberList({
           <div className="flex items-center gap-3">
             {m.image ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.image} alt="" className="h-8 w-8 rounded-full object-cover" />
+              <img src={m.image} alt="" className="h-8 w-8 object-contain" />
             ) : (
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs">
+              <span className="flex h-8 w-8 items-center justify-center bg-zinc-200 text-xs">
                 {m.name[0]?.toUpperCase()}
               </span>
             )}
