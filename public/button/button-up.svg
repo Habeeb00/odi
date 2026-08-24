@@ -1,0 +1,23 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="363" height="359" viewBox="0 0 363 359" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="button">
+<g id="Group 131">
+<ellipse id="Ellipse 12" cx="181.5" cy="214" rx="181.5" ry="145" fill="#1E1E1E"/>
+<ellipse id="Ellipse 11" cx="182" cy="204.5" rx="178" ry="126.5" fill="#3D3B3C"/>
+</g>
+<g id="Ellipse 12_2">
+<ellipse cx="181.5" cy="201" rx="166.5" ry="113" fill="#D8D3D5"/>
+<ellipse cx="181.5" cy="201" rx="166.5" ry="113" fill="url(#paint0_linear_136_6036)" fill-opacity="0.2"/>
+</g>
+<g id="Group 132">
+<path id="Vector 2" d="M166.408 298.927C67.9996 288.172 41.3947 244.637 31 210L26.0789 170.276L25.0395 150.484L24 110.183L340 106V163.915V182.293V210C332.204 236.861 270.971 310.356 166.408 298.927Z" fill="#9C0305"/>
+<ellipse id="Ellipse 13" cx="180.999" cy="109.342" rx="157.999" ry="109.342" fill="#AA0606"/>
+<ellipse id="Ellipse 14" cx="180.999" cy="108.796" rx="145.972" ry="100.048" fill="#DD0000"/>
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_136_6036" x1="340" y1="210.5" x2="15" y2="201" gradientUnits="userSpaceOnUse">
+<stop offset="0.721154"/>
+<stop offset="0.988702" stop-color="white"/>
+</linearGradient>
+</defs>
+</svg>
