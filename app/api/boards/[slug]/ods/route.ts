@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { closeExpiredOds } from "@/lib/od";
 import { validateImageDataUrl } from "@/lib/upload";
+import { serializeOd } from "@/lib/media";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     include: { raisedBy: true, accused: true, category: true, votes: true },
     orderBy: { createdAt: "desc" },
   });
-  return NextResponse.json(ods);
+  return NextResponse.json(ods.map(serializeOd));
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       include: { raisedBy: true, accused: true, category: true, votes: true },
     });
 
-    return NextResponse.json(od, { status: 201 });
+    return NextResponse.json(serializeOd(od), { status: 201 });
   } catch (err) {
     console.error("POST /api/boards/[slug]/ods failed", err);
     return NextResponse.json(

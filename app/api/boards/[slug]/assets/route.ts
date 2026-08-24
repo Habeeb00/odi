@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateImageDataUrl } from "@/lib/upload";
+import { assetFileUrl } from "@/lib/media";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     include: { category: true },
     orderBy: { createdAt: "desc" },
   });
-  return NextResponse.json(assets);
+  return NextResponse.json(assets.map(assetFileUrl));
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     const asset = await prisma.asset.create({
       data: { categoryId, file, dialogue, severity },
     });
-    return NextResponse.json(asset, { status: 201 });
+    return NextResponse.json(assetFileUrl(asset), { status: 201 });
   } catch (err) {
     console.error("POST /api/boards/[slug]/assets failed", err);
     return NextResponse.json(

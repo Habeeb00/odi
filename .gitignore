@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local-machine MCP config (points at 127.0.0.1, not portable)
+.mcp.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

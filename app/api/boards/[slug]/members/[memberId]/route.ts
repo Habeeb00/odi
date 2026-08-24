@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateImageDataUrl } from "@/lib/upload";
+import { memberImageUrl } from "@/lib/media";
 
 export async function PATCH(
   req: NextRequest,
@@ -21,7 +22,7 @@ export async function PATCH(
     }
 
     const member = await prisma.member.update({ where: { id: memberId }, data });
-    return NextResponse.json(member);
+    return NextResponse.json(memberImageUrl(member));
   } catch (err) {
     console.error("PATCH /api/boards/[slug]/members/[memberId] failed", err);
     return NextResponse.json(

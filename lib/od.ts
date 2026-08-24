@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { computeFinalScore, parseScoringRule } from "@/lib/scoring";
+import { memberImageUrl } from "@/lib/media";
 
 // Lazily closes any of the board's ODs whose voting window has passed and
 // scores them from accumulated votes (PRD section 13 — time-based closure,
@@ -27,7 +28,7 @@ export async function closeExpiredOds(boardId: string) {
 export async function closeOdNow(odId: string) {
   const od = await prisma.oD.findUnique({
     where: { id: odId },
-    include: { votes: true, category: true },
+    include: { raisedBy: true, accused: true, votes: true, category: true },
   });
   if (!od) return null;
   if (od.status === "CLOSED") return od;
@@ -57,6 +58,6 @@ export async function getLeaderboard(boardId: string) {
   }
 
   return members
-    .map((m) => ({ ...m, score: totals.get(m.id) ?? 0 }))
+    .map((m) => ({ ...memberImageUrl(m), score: totals.get(m.id) ?? 0 }))
     .sort((a, b) => b.score - a.score);
 }

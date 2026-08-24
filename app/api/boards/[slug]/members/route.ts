@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateImageDataUrl } from "@/lib/upload";
+import { memberImageUrl } from "@/lib/media";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     const member = await prisma.member.create({
       data: { boardId: board.id, name, image },
     });
-    return NextResponse.json(member, { status: 201 });
+    return NextResponse.json(memberImageUrl(member), { status: 201 });
   } catch (err) {
     console.error("POST /api/boards/[slug]/members failed", err);
     return NextResponse.json(
