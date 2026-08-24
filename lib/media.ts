@@ -5,10 +5,19 @@
 // case with an image/GIF asset re-shipped up to ~3MB per tick. Instead, API
 // responses expose a small URL and the actual bytes are served (and cached
 // by the browser) from a dedicated route.
-export function memberImageUrl<T extends { id: string; image: string | null }>(
-  member: T
-): Omit<T, "image"> & { image: string | null } {
-  return { ...member, image: member.image ? `/api/members/${member.id}/image` : null };
+export function memberImageUrl<
+  T extends { id: string; image: string | null; imageHappy?: string | null; imageSad?: string | null },
+>(member: T): T {
+  return {
+    ...member,
+    image: member.image ? `/api/members/${member.id}/image` : null,
+    ...("imageHappy" in member
+      ? { imageHappy: member.imageHappy ? `/api/members/${member.id}/image?mood=happy` : null }
+      : {}),
+    ...("imageSad" in member
+      ? { imageSad: member.imageSad ? `/api/members/${member.id}/image?mood=sad` : null }
+      : {}),
+  };
 }
 
 export function assetFileUrl<T extends { id: string; file: string | null }>(

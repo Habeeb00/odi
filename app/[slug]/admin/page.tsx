@@ -26,7 +26,7 @@ export default function AdminPage({ params }: { params: Promise<{ slug: string }
   if (!board) return null;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
+    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
       <h1 className="text-2xl font-bold">Board admin</h1>
 
       <Section title="Members">
@@ -77,6 +77,8 @@ function MemberList({
 }) {
   const [name, setName] = useState("");
   const [image, setImage] = useState<File | null>(null);
+  const [imageHappy, setImageHappy] = useState<File | null>(null);
+  const [imageSad, setImageSad] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
@@ -94,13 +96,19 @@ function MemberList({
     setBusy(true);
     setError(null);
     try {
-      const imageDataUrl = image ? await facePhoto(image) : undefined;
+      const [imageDataUrl, imageHappyDataUrl, imageSadDataUrl] = await Promise.all([
+        image ? facePhoto(image) : undefined,
+        imageHappy ? facePhoto(imageHappy) : undefined,
+        imageSad ? facePhoto(imageSad) : undefined,
+      ]);
       await apiFetch(`/api/boards/${slug}/members`, {
         method: "POST",
-        body: JSON.stringify({ name, imageDataUrl }),
+        body: JSON.stringify({ name, imageDataUrl, imageHappyDataUrl, imageSadDataUrl }),
       });
       setName("");
       setImage(null);
+      setImageHappy(null);
+      setImageSad(null);
       onChange();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add member");
@@ -118,14 +126,14 @@ function MemberList({
     }
   }
 
-  async function setPhoto(id: string, file: File) {
+  async function setPhoto(id: string, field: "imageDataUrl" | "imageHappyDataUrl" | "imageSadDataUrl", file: File) {
     setPhotoBusyId(id);
     setError(null);
     try {
-      const imageDataUrl = await facePhoto(file);
+      const dataUrl = await facePhoto(file);
       await apiFetch(`/api/boards/${slug}/members/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ imageDataUrl }),
+        body: JSON.stringify({ [field]: dataUrl }),
       });
       onChange();
     } catch (err) {
@@ -135,10 +143,23 @@ function MemberList({
     }
   }
 
+  const PHOTO_SLOTS = [
+    { field: "imageDataUrl" as const, label: "Normal", pick: (m: Member) => m.image },
+    { field: "imageHappyDataUrl" as const, label: "Laughing", pick: (m: Member) => m.imageHappy },
+    { field: "imageSadDataUrl" as const, label: "Crying", pick: (m: Member) => m.imageSad },
+  ];
+
   return (
     <div className="flex flex-col gap-3">
+      <p className="text-sm text-zinc-500">
+        Each member can have three sticker photos — normal, laughing, and crying — shown on
+        the display depending on whether they&rsquo;re winning or losing the race.
+      </p>
       {members.map((m) => (
-        <div key={m.id} className="flex items-center justify-between rounded-md border border-zinc-200 px-4 py-2">
+        <div
+          key={m.id}
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 px-4 py-2"
+        >
           <div className="flex items-center gap-3">
             {m.image ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -150,21 +171,23 @@ function MemberList({
             )}
             <span>{m.name}</span>
           </div>
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-zinc-500 underline cursor-pointer">
-              {photoBusyId === m.id ? "Uploading..." : "Change photo"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={photoBusyId === m.id}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) setPhoto(m.id, file);
-                  e.target.value = "";
-                }}
-              />
-            </label>
+          <div className="flex flex-wrap items-center gap-3">
+            {PHOTO_SLOTS.map((slot) => (
+              <label key={slot.field} className="text-sm text-zinc-500 underline cursor-pointer">
+                {photoBusyId === m.id ? "Uploading..." : slot.pick(m) ? slot.label : `+ ${slot.label}`}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={photoBusyId === m.id}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setPhoto(m.id, slot.field, file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            ))}
             <button onClick={() => remove(m.id)} className="text-sm text-red-600">
               Remove
             </button>
@@ -172,16 +195,29 @@ function MemberList({
         </div>
       ))}
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <form onSubmit={add} className="flex flex-wrap items-center gap-2">
+      <form onSubmit={add} className="flex flex-col gap-2 rounded-md border border-zinc-200 p-3">
         <input
-          className="flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2"
+          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
           placeholder="Member name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
-        <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] ?? null)} />
-        <button disabled={busy} className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium">
+        <div className="flex flex-wrap gap-3">
+          <label className="flex flex-col gap-1 text-xs text-zinc-500">
+            Normal photo
+            <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] ?? null)} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-500">
+            Laughing photo (optional)
+            <input type="file" accept="image/*" onChange={(e) => setImageHappy(e.target.files?.[0] ?? null)} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-500">
+            Crying photo (optional)
+            <input type="file" accept="image/*" onChange={(e) => setImageSad(e.target.files?.[0] ?? null)} />
+          </label>
+        </div>
+        <button disabled={busy} className="self-start rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium">
           Add
         </button>
       </form>

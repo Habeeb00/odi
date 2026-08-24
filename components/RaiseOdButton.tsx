@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { apiFetch, fileToDataUrl } from "@/lib/api";
+import CyclingAvatar from "@/components/CyclingAvatar";
 import type { Board, Member, OD } from "@/lib/types";
 
 const ITEM_WIDTH = 96;
@@ -120,20 +121,18 @@ export default function RaiseOdButton({
                   accusedId === m.id ? "scale-110" : "opacity-50"
                 }`}
               >
-                {m.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={m.image}
-                    alt={m.name}
-                    className={`h-20 w-20 object-contain transition ${
-                      accusedId === m.id ? "drop-shadow-[0_6px_10px_rgba(220,38,38,0.35)]" : ""
-                    }`}
-                  />
-                ) : (
-                  <span className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black text-zinc-700">
-                    {m.name[0]?.toUpperCase()}
-                  </span>
-                )}
+                <CyclingAvatar
+                  images={[m.image, m.imageHappy, m.imageSad]}
+                  alt={m.name}
+                  className={`h-20 w-20 object-contain transition ${
+                    accusedId === m.id ? "drop-shadow-[0_6px_10px_rgba(220,38,38,0.35)]" : ""
+                  }`}
+                  fallback={
+                    <span className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black text-zinc-700">
+                      {m.name[0]?.toUpperCase()}
+                    </span>
+                  }
+                />
               </span>
               <span
                 className={`max-w-[90px] truncate text-xs ${
@@ -148,8 +147,6 @@ export default function RaiseOdButton({
             <p className="text-sm text-zinc-500">No one else on this board yet.</p>
           )}
         </div>
-        {/* center marker */}
-        <div className="pointer-events-none absolute inset-y-1 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-red-200" />
       </div>
 
       <button
@@ -158,7 +155,7 @@ export default function RaiseOdButton({
         aria-label="Raise an OD"
         className="group mt-2 flex flex-col items-center gap-4"
       >
-        <span className="relative block h-[320px] w-[323px]">
+        <span className="relative block h-[220px] w-[223px] sm:h-[320px] sm:w-[323px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/button/button-up.svg"
@@ -171,28 +168,30 @@ export default function RaiseOdButton({
           <img
             src="/button/button-down.svg"
             alt=""
-            className={`absolute bottom-0 h-[276px] w-full transition-opacity duration-100 ${
+            className={`absolute bottom-0 h-[190px] w-full transition-opacity duration-100 sm:h-[276px] ${
               pressed ? "opacity-100" : "opacity-0"
             }`}
           />
           {accused && (
-            <span className="absolute left-1/2 top-[24%] flex h-36 w-36 -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-              {accused.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={accused.image}
-                  alt={accused.name}
-                  className="h-36 w-36 object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.35)]"
-                />
-              ) : (
-                <span className="text-6xl font-black text-white drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)]">
-                  {accused.name[0]?.toUpperCase()}
-                </span>
-              )}
+            <span
+              className={`absolute left-1/2 top-[24%] flex h-24 w-24 -translate-x-1/2 items-center justify-center transition-transform duration-100 sm:h-36 sm:w-36 [--press-shift:30px] sm:[--press-shift:44px] ${
+                pressed ? "translate-y-[calc(-50%+var(--press-shift))] scale-95" : "-translate-y-1/2"
+              }`}
+            >
+              <CyclingAvatar
+                images={[accused.image, accused.imageHappy, accused.imageSad]}
+                alt={accused.name}
+                className="h-24 w-24 object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.35)] sm:h-36 sm:w-36"
+                fallback={
+                  <span className="text-4xl font-black text-white drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)] sm:text-6xl">
+                    {accused.name[0]?.toUpperCase()}
+                  </span>
+                }
+              />
             </span>
           )}
         </span>
-        <span className="text-lg font-bold text-zinc-800">
+        <span className="text-base font-bold text-zinc-800 sm:text-lg">
           Raise an OD{accused ? ` on ${accused.name}` : ""}
         </span>
       </button>

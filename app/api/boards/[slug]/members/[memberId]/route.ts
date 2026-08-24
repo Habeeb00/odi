@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateImageDataUrl } from "@/lib/upload";
+import { parseMemberImageFields } from "@/lib/upload";
 import { memberImageUrl } from "@/lib/media";
 
 export async function PATCH(
@@ -13,12 +13,10 @@ export async function PATCH(
     const data: Record<string, unknown> = {};
 
     if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();
-    if (typeof body.imageDataUrl === "string" && body.imageDataUrl) {
-      try {
-        data.image = validateImageDataUrl(body.imageDataUrl);
-      } catch (err) {
-        return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-      }
+    try {
+      Object.assign(data, parseMemberImageFields(body));
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 400 });
     }
 
     const member = await prisma.member.update({ where: { id: memberId }, data });

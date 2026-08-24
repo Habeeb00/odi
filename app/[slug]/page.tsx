@@ -47,7 +47,7 @@ export default function BoardHome({ params }: { params: Promise<{ slug: string }
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/${slug}` : "";
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-10 px-6 py-8">
+    <main className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-6 sm:gap-10 sm:px-6 sm:py-8">
       {board && (
         <RaiseOdButton
           slug={slug}
@@ -73,7 +73,7 @@ export default function BoardHome({ params }: { params: Promise<{ slug: string }
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 p-4">
         <div>
           <p className="text-sm text-zinc-500">Share this board</p>
-          <p className="font-mono text-sm">{shareUrl}</p>
+          <p className="break-all font-mono text-sm">{shareUrl}</p>
           {board?.joinCode && (
             <p className="mt-1 text-sm text-zinc-500">
               Join code: <span className="font-mono font-bold tracking-widest">{board.joinCode}</span>
@@ -124,7 +124,7 @@ export default function BoardHome({ params }: { params: Promise<{ slug: string }
                     {memberId === od.accusedId ? "You can't vote on your own case." : "Pick who you are to vote."}
                   </p>
                 ) : (
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {(["OD", "SMALL_OD", "REJECT"] as const).map((choice) => (
                       <button
                         key={choice}

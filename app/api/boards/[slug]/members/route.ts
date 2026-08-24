@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateImageDataUrl } from "@/lib/upload";
+import { parseMemberImageFields } from "@/lib/upload";
 import { memberImageUrl } from "@/lib/media";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -13,17 +13,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     const board = await prisma.board.findUnique({ where: { slug } });
     if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
 
-    let image: string | undefined;
-    if (typeof body.imageDataUrl === "string" && body.imageDataUrl) {
-      try {
-        image = validateImageDataUrl(body.imageDataUrl);
-      } catch (err) {
-        return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-      }
+    let imageFields: Record<string, string>;
+    try {
+      imageFields = parseMemberImageFields(body);
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 400 });
     }
 
     const member = await prisma.member.create({
-      data: { boardId: board.id, name, image },
+      data: { boardId: board.id, name, ...imageFields },
     });
     return NextResponse.json(memberImageUrl(member), { status: 201 });
   } catch (err) {

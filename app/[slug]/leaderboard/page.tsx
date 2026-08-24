@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import CyclingAvatar from "@/components/CyclingAvatar";
 import type { Board, LeaderboardEntry, OD } from "@/lib/types";
 
 export default function LeaderboardPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -22,32 +23,36 @@ export default function LeaderboardPage({ params }: { params: Promise<{ slug: st
   const max = Math.max(1, ...leaderboard.map((m) => m.score));
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-10">
-      <h1 className="text-3xl font-black">{board?.name ?? "Leaderboard"}</h1>
+    <main className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-10">
+      <h1 className="text-2xl font-black sm:text-3xl">{board?.name ?? "Leaderboard"}</h1>
       <p className="text-sm text-zinc-500">Ranked by total OD score</p>
 
-      <div className="mt-8 flex flex-col gap-4">
+      <div className="mt-6 flex flex-col gap-4 sm:mt-8">
         {leaderboard.map((m, i) => (
           <button
             key={m.id}
             onClick={() => setSelected(m)}
-            className="flex items-center gap-4 rounded-md text-left transition-opacity hover:opacity-70"
+            className="flex items-center gap-3 rounded-md text-left transition-opacity hover:opacity-70 sm:gap-4"
           >
-            <span className="w-6 text-right text-lg font-bold text-zinc-400">{i + 1}</span>
-            {m.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.image} alt={m.name} className="h-12 w-12 object-contain" />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center bg-zinc-200 text-lg font-bold">
-                {m.name[0]?.toUpperCase()}
-              </div>
-            )}
-            <div className="flex-1">
-              <div className="flex items-baseline justify-between">
-                <span className="font-semibold underline decoration-dotted underline-offset-4">
+            <span className="w-5 text-right text-base font-bold text-zinc-400 sm:w-6 sm:text-lg">
+              {i + 1}
+            </span>
+            <CyclingAvatar
+              images={[m.image, m.imageHappy, m.imageSad]}
+              alt={m.name}
+              className="h-10 w-10 object-contain sm:h-12 sm:w-12"
+              fallback={
+                <div className="flex h-10 w-10 items-center justify-center bg-zinc-200 text-base font-bold sm:h-12 sm:w-12 sm:text-lg">
+                  {m.name[0]?.toUpperCase()}
+                </div>
+              }
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="truncate font-semibold underline decoration-dotted underline-offset-4">
                   {m.name}
                 </span>
-                <span className="font-mono text-sm text-zinc-500">{m.score}</span>
+                <span className="shrink-0 font-mono text-sm text-zinc-500">{m.score}</span>
               </div>
               <div className="mt-1 h-2 w-full rounded-full bg-zinc-100">
                 <div

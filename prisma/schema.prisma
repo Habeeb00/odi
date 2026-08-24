@@ -35,11 +35,16 @@ model Board {
 }
 
 model Member {
-  id      String  @id @default(cuid())
-  boardId String
-  name    String
-  image   String?
-  board   Board   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  id         String  @id @default(cuid())
+  boardId    String
+  name       String
+  image      String?
+  // Extra sticker-style photos shown on the display's race bar depending on
+  // standing: imageHappy for the current leader, imageSad for last place.
+  // Both fall back to `image` when not uploaded.
+  imageHappy String?
+  imageSad   String?
+  board      Board   @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
   raisedOds  OD[]   @relation("RaisedBy")
   accusedOds OD[]   @relation("Accused")
@@ -49,9 +54,9 @@ model Member {
 }
 
 model Category {
-  id      String @id @default(cuid())
-  boardId String
-  name    String
+  id          String @id @default(cuid())
+  boardId     String
+  name        String
   // JSON string, e.g. {"OD":10,"SMALL_OD":5,"REJECT":0}
   scoringRule String
   board       Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
@@ -84,9 +89,9 @@ model OD {
 }
 
 model Vote {
-  id       String @id @default(cuid())
-  odId     String
-  memberId String
+  id        String   @id @default(cuid())
+  odId      String
+  memberId  String
   // "OD" | "SMALL_OD" | "REJECT"
   vote      String
   createdAt DateTime @default(now())
@@ -98,13 +103,13 @@ model Vote {
 }
 
 model Asset {
-  id         String  @id @default(cuid())
+  id         String   @id @default(cuid())
   categoryId String
   file       String?
   dialogue   String?
   // "MILD" | "MEDIUM" | "SEVERE" | null
-  severity  String?
-  createdAt DateTime @default(now())
+  severity   String?
+  createdAt  DateTime @default(now())
 
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 }

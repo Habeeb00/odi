@@ -2,6 +2,7 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import CyclingAvatar from "@/components/CyclingAvatar";
 import type { LeaderboardEntry, OD, Asset } from "@/lib/types";
 
 type OdWithAsset = OD & { asset: Asset | null };
@@ -120,7 +121,7 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
   }, [slug]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-white p-10">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-white p-4 sm:p-10">
       {screen === "leaderboard" && <Leaderboard boardName={boardName} entries={leaderboard} pendingCount={pendingCount} />}
       {screen === "detected" && activeOd && <Detected od={activeOd} />}
       {screen === "pending" && activeOd && <PendingCase od={activeOd} />}
@@ -140,41 +141,53 @@ function Leaderboard({
 }) {
   const max = Math.max(1, ...entries.map((e) => e.score));
   return (
-    <div className="w-full max-w-4xl">
-      <h1 className="text-center text-5xl font-black tracking-tight">{boardName}</h1>
+    <div className="w-full max-w-4xl px-2 sm:px-0">
+      <h1 className="text-center text-3xl font-black tracking-tight sm:text-5xl">{boardName}</h1>
       {pendingCount > 0 && (
         <p className="mt-2 text-center text-sm text-zinc-500">
           {pendingCount} case{pendingCount === 1 ? "" : "s"} under investigation
         </p>
       )}
-      <div className="mt-12 flex flex-col gap-6">
-        {entries.map((m, i) => (
-          <div key={m.id} className="flex items-center gap-6">
-            <span className="w-10 text-right text-3xl font-black text-zinc-300">
-              {i + 1}
-            </span>
-            {m.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.image} alt={m.name} className="h-20 w-20 object-contain" />
-            ) : (
-              <div className="flex h-20 w-20 items-center justify-center bg-zinc-200 text-2xl font-bold">
-                {m.name[0]?.toUpperCase()}
-              </div>
-            )}
-            <div className="flex-1">
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold">{m.name}</span>
-                <span className="font-mono text-2xl">{m.score}</span>
-              </div>
-              <div className="mt-2 h-4 w-full rounded-full bg-zinc-100">
-                <div
-                  className="h-4 rounded-full bg-black transition-all duration-1000 ease-out"
-                  style={{ width: `${(Math.max(m.score, 0) / max) * 100}%` }}
-                />
+      <div className="mt-6 flex flex-col gap-5 sm:mt-12 sm:gap-8">
+        {entries.map((m, i) => {
+          const pct = (Math.max(m.score, 0) / max) * 100;
+          return (
+            <div key={m.id} className="flex items-center gap-2 sm:gap-4">
+              <span className="w-6 text-right text-lg font-black text-zinc-300 sm:w-8 sm:text-2xl">
+                {i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-baseline justify-between gap-2 px-1">
+                  <span className="truncate text-base font-bold sm:text-xl">{m.name}</span>
+                  <span className="shrink-0 font-mono text-base sm:text-xl">{m.score}</span>
+                </div>
+                <div className="relative h-3 w-full rounded-full bg-zinc-100 [--avatar:44px] sm:[--avatar:72px]">
+                  <div
+                    className="h-3 rounded-full bg-black transition-all duration-1000 ease-out"
+                    style={{ width: `${pct}%` }}
+                  />
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 transition-all duration-1000 ease-out"
+                    style={{
+                      left: `clamp(0px, calc(${pct}% - var(--avatar) / 2), calc(100% - var(--avatar)))`,
+                    }}
+                  >
+                    <CyclingAvatar
+                      images={[m.image, m.imageHappy, m.imageSad]}
+                      alt={m.name}
+                      className="h-[var(--avatar)] w-[var(--avatar)] object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.25)]"
+                      fallback={
+                        <div className="flex h-[var(--avatar)] w-[var(--avatar)] items-center justify-center rounded-full bg-zinc-200 text-lg font-bold sm:text-2xl">
+                          {m.name[0]?.toUpperCase()}
+                        </div>
+                      }
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {entries.length === 0 && (
           <p className="text-center text-zinc-500">No members yet.</p>
         )}
@@ -187,8 +200,8 @@ function Detected({ od }: { od: OdWithAsset }) {
   return (
     <div className="flex flex-col items-center gap-4 text-center">
       <p className="text-2xl font-semibold text-zinc-500">🚨</p>
-      <h1 className="text-6xl font-black tracking-tight">OD DETECTED</h1>
-      <p className="text-3xl font-bold">{od.accused.name}</p>
+      <h1 className="text-4xl font-black tracking-tight sm:text-6xl">OD DETECTED</h1>
+      <p className="text-2xl font-bold sm:text-3xl">{od.accused.name}</p>
     </div>
   );
 }
@@ -199,8 +212,8 @@ function PendingCase({ od }: { od: OdWithAsset }) {
       <p className="text-sm font-semibold uppercase tracking-widest text-zinc-500">
         OD Under Investigation
       </p>
-      <h1 className="text-4xl font-black">{od.accused.name}</h1>
-      <p className="text-xl text-zinc-700">{od.description}</p>
+      <h1 className="text-2xl font-black sm:text-4xl">{od.accused.name}</h1>
+      <p className="text-lg text-zinc-700 sm:text-xl">{od.description}</p>
       {od.asset?.file && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={od.asset.file} alt="" className="max-h-72 rounded-md" />
@@ -223,8 +236,8 @@ function Verdict({ od }: { od: OdWithAsset }) {
   return (
     <div className="flex w-full max-w-2xl flex-col items-center gap-5 text-center">
       <p className="text-sm font-semibold uppercase tracking-widest text-zinc-500">OD Court</p>
-      <h1 className="text-4xl font-black">{od.accused.name}</h1>
-      <p className="text-lg text-zinc-600">{od.description}</p>
+      <h1 className="text-2xl font-black sm:text-4xl">{od.accused.name}</h1>
+      <p className="text-base text-zinc-600 sm:text-lg">{od.description}</p>
       {od.asset?.file && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={od.asset.file} alt="" className="max-h-72 rounded-md" />
@@ -238,8 +251,8 @@ function Verdict({ od }: { od: OdWithAsset }) {
           .map(([k, c]) => `${c} ${VOTE_LABEL[k]}`)
           .join(" · ") || "No votes"}
       </p>
-      <p className="text-6xl font-black">{guilty ? "GUILTY" : "NOT AN OD"}</p>
-      <p className="text-3xl font-bold">+{od.finalScore ?? 0} OD</p>
+      <p className="text-4xl font-black sm:text-6xl">{guilty ? "GUILTY" : "NOT AN OD"}</p>
+      <p className="text-2xl font-bold sm:text-3xl">+{od.finalScore ?? 0} OD</p>
     </div>
   );
 }

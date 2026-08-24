@@ -3,6 +3,8 @@ export type Member = {
   boardId: string;
   name: string;
   image: string | null;
+  imageHappy: string | null;
+  imageSad: string | null;
 };
 
 export type Category = {
