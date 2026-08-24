@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useBoard } from "@/lib/useBoard";
 import { apiFetch, fileToDataUrl } from "@/lib/api";
+import { cropToFace } from "@/lib/faceCrop";
 import type { Asset, Board, Category, Member, OD } from "@/lib/types";
 
 export default function AdminPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -80,12 +81,20 @@ function MemberList({
   const [error, setError] = useState<string | null>(null);
   const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
 
+  async function facePhoto(file: File): Promise<string> {
+    try {
+      return await cropToFace(file);
+    } catch {
+      return fileToDataUrl(file);
+    }
+  }
+
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      const imageDataUrl = image ? await fileToDataUrl(image) : undefined;
+      const imageDataUrl = image ? await facePhoto(image) : undefined;
       await apiFetch(`/api/boards/${slug}/members`, {
         method: "POST",
         body: JSON.stringify({ name, imageDataUrl }),
@@ -113,7 +122,7 @@ function MemberList({
     setPhotoBusyId(id);
     setError(null);
     try {
-      const imageDataUrl = await fileToDataUrl(file);
+      const imageDataUrl = await facePhoto(file);
       await apiFetch(`/api/boards/${slug}/members/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ imageDataUrl }),

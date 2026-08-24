@@ -8,7 +8,6 @@ import { getIdentity, setIdentity } from "@/lib/identity";
 
 const TABS = [
   { href: "", label: "Home" },
-  { href: "/raise", label: "Raise OD" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/display", label: "Display" },
   { href: "/admin", label: "Admin" },
@@ -53,12 +52,12 @@ export default function BoardLayout({
       {!isDisplay && (
         <header className="border-b border-zinc-200 px-6 py-4">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
-            <Link href={`/b/${slug}`} className="text-lg font-bold">
+            <Link href={`/${slug}`} className="text-lg font-bold">
               {board.name}
             </Link>
             <nav className="flex flex-wrap gap-4 text-sm">
               {TABS.map((t) => {
-                const href = `/b/${slug}${t.href}`;
+                const href = `/${slug}${t.href}`;
                 const active = pathname === href;
                 return (
                   <Link

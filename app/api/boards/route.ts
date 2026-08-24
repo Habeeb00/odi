@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { slugify } from "@/lib/slug";
+import { RESERVED_SLUGS, slugify } from "@/lib/slug";
 import { generateJoinCode } from "@/lib/joinCode";
 import { DEFAULT_SCORING_RULE } from "@/lib/scoring";
 
@@ -17,9 +17,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "name and createdBy are required" }, { status: 400 });
     }
 
-    let slug = slugify(name);
-    while (await prisma.board.findUnique({ where: { slug } })) {
-      slug = slugify(name);
+    const baseSlug = slugify(name);
+    let slug = baseSlug;
+    let suffix = 1;
+    while (RESERVED_SLUGS.has(slug) || (await prisma.board.findUnique({ where: { slug } }))) {
+      suffix += 1;
+      slug = `${baseSlug}-${suffix}`;
     }
 
     let joinCode = generateJoinCode();

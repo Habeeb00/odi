@@ -40,9 +40,12 @@ npx prisma db push
 npm run dev
 ```
 
-Open http://localhost:3000, create a board, and share the `/b/<slug>` link
-with your group. Open `/b/<slug>/display` on a shared screen (TV, monitor)
-for the live leaderboard and OD announcements.
+Open http://localhost:3000, create a board, and share the `/<slug>` link
+with your group — the slug is derived from the board name (e.g. "TinkerHub"
+becomes `/tinkerhub`) so the leaderboard is easy to find and publicly
+viewable; a separate join code gates raising/voting on ODs. Open
+`/<slug>/display` on a shared screen (TV, monitor) for the live leaderboard
+and OD announcements.
 
 ## How it works
 
@@ -56,6 +59,6 @@ for the live leaderboard and OD announcements.
   member, always derived live from votes (no separate score table to keep in
   sync).
 - **Assets** — admins upload category-specific images/dialogues in
-  `/b/<slug>/admin`; the display and voting screens surface them instead of
+  `/<slug>/admin`; the display and voting screens surface them instead of
   generic decoration. Oddy Board never generates humour with AI — the
   personality comes entirely from what you upload.
