@@ -572,6 +572,7 @@ function SettingsForm({
   const [regeneratingAdmin, setRegeneratingAdmin] = useState(false);
   const [newAdminCode, setNewAdminCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [shared, setShared] = useState(false);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -621,11 +622,43 @@ function SettingsForm({
     }
   }
 
+  // Bundles the join code into the raise-page link itself, so whoever
+  // opens it lands straight on the name picker with the code already
+  // filled in — no copy-pasting a code into a separate field.
+  async function shareInvite() {
+    if (!board.joinCode) return;
+    const url = `${window.location.origin}/${slug}/raise?code=${board.joinCode}`;
+    setError(null);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Join ${board.name} on ഒടി`, url });
+      } catch {
+        // User cancelled the share sheet — not an error.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      setError("Couldn't copy the invite link");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-4 py-3">
         <span className="text-sm">Join code:</span>
         <span className="font-mono font-bold tracking-widest">{board.joinCode ?? "not set"}</span>
+        {board.joinCode && (
+          <button
+            onClick={shareInvite}
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium"
+          >
+            {shared ? "Copied!" : "Share invite"}
+          </button>
+        )}
         <button
           onClick={regenerateJoinCode}
           disabled={regenerating}
@@ -634,6 +667,10 @@ function SettingsForm({
           {regenerating ? "Generating..." : board.joinCode ? "Regenerate" : "Generate"}
         </button>
       </div>
+      <p className="-mt-2 text-xs text-zinc-500">
+        Share invite sends a link straight to the raise page with the join code built in — new
+        members just pick their name and set a password.
+      </p>
 
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-4 py-3">
         <span className="text-sm">Admin code:</span>

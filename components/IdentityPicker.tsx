@@ -12,22 +12,26 @@ export default function IdentityPicker({
   onPicked,
   onClose,
   canClose,
+  initialCode,
 }: {
   slug: string;
   members: PickableMember[];
   onPicked: (id: string) => void;
   onClose: () => void;
   canClose: boolean;
+  // Pre-fills the join code when someone arrives via an invite link (see
+  // ?code= on the raise page) so they only need to pick their name.
+  initialCode?: string;
 }) {
   const [selected, setSelected] = useState<PickableMember | null>(null);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   function pick(member: PickableMember) {
     setSelected(member);
-    setCode("");
+    setCode(initialCode ?? "");
     setPassword("");
     setError(null);
   }
@@ -117,13 +121,16 @@ export default function IdentityPicker({
             ) : (
               <>
                 <p className="mb-3 text-sm text-zinc-500">
-                  First time joining as {selected.name} — enter the board&rsquo;s join code and pick a
-                  password you&rsquo;ll use to log back in.
+                  First time joining as {selected.name} —{" "}
+                  {initialCode
+                    ? "your invite code is already filled in, just"
+                    : "enter the board's join code and"}{" "}
+                  pick a password you&rsquo;ll use to log back in.
                 </p>
                 <label className="mb-4 flex flex-col gap-1">
                   <span className="text-sm font-medium">Join code</span>
                   <input
-                    autoFocus
+                    autoFocus={!initialCode}
                     className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-center font-mono uppercase tracking-widest outline-none focus:border-black"
                     placeholder="AB12CD"
                     value={code}
@@ -133,6 +140,7 @@ export default function IdentityPicker({
                 <label className="mb-4 flex flex-col gap-1">
                   <span className="text-sm font-medium">Choose a password</span>
                   <input
+                    autoFocus={!!initialCode}
                     type="password"
                     className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 outline-none focus:border-black"
                     value={password}

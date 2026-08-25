@@ -19,6 +19,7 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
   const [memberId, setMemberId] = useState<string | null>(null);
   const [identityChecked, setIdentityChecked] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [voting, setVoting] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
@@ -35,8 +36,18 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
   );
 
   useEffect(() => {
-    setMemberId(getIdentity(slug));
+    const existing = getIdentity(slug);
+    setMemberId(existing);
     setIdentityChecked(true);
+
+    // Arriving via a share/invite link (?code=...) skips straight to the
+    // name picker with the join code pre-filled — no separate "Join with
+    // code" click needed.
+    const code = new URLSearchParams(window.location.search).get("code");
+    if (code) {
+      setInviteCode(code);
+      if (!existing) setPicking(true);
+    }
   }, [slug]);
 
   // Live feed: one request in flight at a time, with a hard timeout — see
@@ -116,6 +127,7 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
           <IdentityPicker
             slug={slug}
             members={board.members}
+            initialCode={inviteCode ?? undefined}
             onPicked={(id) => {
               setMemberId(id);
               setPicking(false);

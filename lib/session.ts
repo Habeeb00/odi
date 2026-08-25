@@ -82,6 +82,16 @@ export function withMember(
   res.cookies.set(sessionCookie(session));
 }
 
+export function withoutMember(
+  res: { cookies: { set: (opts: ReturnType<typeof sessionCookie>) => void } },
+  req: NextRequest,
+  boardId: string
+) {
+  const session = getSession(req);
+  delete session.members[boardId];
+  res.cookies.set(sessionCookie(session));
+}
+
 export function withAdmin(
   res: { cookies: { set: (opts: ReturnType<typeof sessionCookie>) => void } },
   req: NextRequest,

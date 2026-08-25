@@ -2,9 +2,10 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useBoard } from "@/lib/useBoard";
-import { getIdentity } from "@/lib/identity";
+import { apiFetch } from "@/lib/api";
+import { getIdentity, clearIdentity } from "@/lib/identity";
 import IdentityPicker from "@/components/IdentityPicker";
 
 const TABS = [
@@ -23,12 +24,28 @@ export default function BoardLayout({
   const { slug } = use(params);
   const { board, loading, error } = useBoard(slug);
   const pathname = usePathname();
+  const router = useRouter();
   const [memberId, setMemberId] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
 
   useEffect(() => {
     setMemberId(getIdentity(slug));
   }, [slug]);
+
+  async function signOut() {
+    clearIdentity(slug);
+    setMemberId(null);
+    try {
+      await apiFetch(`/api/boards/${slug}/logout`, { method: "POST" });
+    } catch {
+      // Local identity is already cleared — a failed cookie clear just
+      // means the next login re-signs the cookie anyway.
+    }
+    // The raise page keeps its own memberId state from a one-time read of
+    // localStorage — a full navigation forces it to re-check, rather than
+    // it staying stale on the now-signed-out member's raise UI.
+    router.push(`/${slug}`);
+  }
 
   if (loading) return <main className="p-8 text-zinc-500">Loading board...</main>;
   if (error || !board)
@@ -63,11 +80,18 @@ export default function BoardLayout({
               );
             })}
           </nav>
-          <button onClick={() => setPicking(true)} className="text-xs text-zinc-500 underline">
-            {memberId
-              ? board.members.find((m) => m.id === memberId)?.name ?? "Who am I?"
-              : "Who am I?"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setPicking(true)} className="text-xs text-zinc-500 underline">
+              {memberId
+                ? board.members.find((m) => m.id === memberId)?.name ?? "Who am I?"
+                : "Who am I?"}
+            </button>
+            {memberId && (
+              <button onClick={signOut} className="text-xs text-zinc-500 underline">
+                Sign out
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
