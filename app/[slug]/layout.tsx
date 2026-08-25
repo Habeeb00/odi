@@ -30,15 +30,6 @@ export default function BoardLayout({
     setMemberId(getIdentity(slug));
   }, [slug]);
 
-  const isDisplay = pathname.endsWith("/display");
-
-  useEffect(() => {
-    // Don't force the login prompt open on the display screen — a passive
-    // viewer shouldn't get blocked by it; they can still tap "Who am I?" in
-    // the header to log in from there when they want to raise/vote.
-    if (board && !memberId && !isDisplay) setPicking(true);
-  }, [board, memberId, isDisplay]);
-
   if (loading) return <main className="p-8 text-zinc-500">Loading board...</main>;
   if (error || !board)
     return (
@@ -89,7 +80,7 @@ export default function BoardLayout({
             setPicking(false);
           }}
           onClose={() => setPicking(false)}
-          canClose={!!memberId || isDisplay}
+          canClose
         />
       )}
 
