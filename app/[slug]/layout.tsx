@@ -9,7 +9,7 @@ import { getIdentity, setIdentity } from "@/lib/identity";
 
 const TABS = [
   { href: "", label: "Home" },
-  { href: "/display", label: "Display" },
+  { href: "/raise", label: "Raise" },
   { href: "/admin", label: "Admin" },
 ];
 
