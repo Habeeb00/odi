@@ -172,14 +172,14 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center bg-white p-4 sm:p-10">
+    <main className="relative flex min-h-screen flex-col items-center justify-center bg-white p-3 sm:p-8">
       {stale && (
         <p className="absolute top-2 right-3 text-xs text-zinc-400">Reconnecting…</p>
       )}
       {loading ? (
         <p className="text-sm text-zinc-400">Loading leaderboard…</p>
       ) : (
-        <div className="w-full max-w-4xl px-4 sm:px-0">
+        <div className="w-full max-w-4xl px-3 sm:px-0">
           <RaceLeaderboard
             entries={leaderboard}
             onSelectMember={setSelectedMember}

@@ -28,7 +28,7 @@ export default function RaceLeaderboard({
   const range = scoreRange(entries);
   return (
     <div className="w-full">
-      <div className="flex flex-col gap-8 sm:gap-12">
+      <div className="flex flex-col gap-5 sm:gap-8">
         {entries.map((m) => {
           const pct = Math.min(100, (Math.max(m.score, 0) / range) * 100);
           const photo = photoFor ? photoFor(m) : m.image;
@@ -37,7 +37,7 @@ export default function RaceLeaderboard({
             <button
               key={m.id}
               onClick={() => onSelectMember(m)}
-              className="relative h-1.5 w-full rounded-full bg-zinc-200 [--avatar:44px] sm:[--avatar:72px]"
+              className="relative h-1.5 w-full rounded-full bg-zinc-200 [--avatar:36px] sm:[--avatar:60px]"
             >
               <div
                 className="h-1.5 rounded-full bg-red-600 transition-all duration-1000 ease-out"
@@ -52,7 +52,7 @@ export default function RaceLeaderboard({
                 {flash !== null && (
                   <span
                     key={flash}
-                    className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full animate-[flash-up_1.6s_ease-out_forwards] whitespace-nowrap font-mono text-sm font-bold text-red-600"
+                    className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full animate-[flash-up_1.6s_ease-out_forwards] whitespace-nowrap font-mono text-xs font-bold text-red-600 sm:text-sm"
                   >
                     +{flash} XP
                   </span>
@@ -65,7 +65,7 @@ export default function RaceLeaderboard({
                     className="h-full w-full object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.25)] transition-transform duration-300"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center rounded-full bg-zinc-200 text-lg font-bold sm:text-2xl">
+                  <div className="flex h-full w-full items-center justify-center rounded-full bg-zinc-200 text-sm font-bold sm:text-xl">
                     {m.name[0]?.toUpperCase()}
                   </div>
                 )}

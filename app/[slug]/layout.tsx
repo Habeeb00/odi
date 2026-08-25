@@ -46,7 +46,7 @@ export default function BoardLayout({
       <header className="border-b border-zinc-200 px-6 py-4">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
           <Link href={`/${slug}`} className="text-lg font-bold">
-            Odi
+            ഒടി
           </Link>
           <nav className="flex flex-wrap gap-4 text-sm">
             {TABS.map((t) => {
