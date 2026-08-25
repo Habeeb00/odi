@@ -91,6 +91,7 @@ function MemberList({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
+  const [generatingKey, setGeneratingKey] = useState<string | null>(null);
 
   function pickFile(
     setFile: (f: File | null) => void,
@@ -181,17 +182,45 @@ function MemberList({
     }
   }
 
+  async function generateMood(id: string, mood: "happy" | "sad") {
+    const key = `${id}-${mood}`;
+    setGeneratingKey(key);
+    setError(null);
+    try {
+      await apiFetch(`/api/boards/${slug}/members/${id}/generate-mood`, {
+        method: "POST",
+        body: JSON.stringify({ mood }),
+      });
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate photo");
+    } finally {
+      setGeneratingKey(null);
+    }
+  }
+
   const PHOTO_SLOTS = [
-    { field: "imageDataUrl" as const, label: "Normal", pick: (m: Member) => m.image },
-    { field: "imageHappyDataUrl" as const, label: "Laughing", pick: (m: Member) => m.imageHappy },
-    { field: "imageSadDataUrl" as const, label: "Crying", pick: (m: Member) => m.imageSad },
+    { field: "imageDataUrl" as const, label: "Normal", pick: (m: Member) => m.image, mood: null },
+    {
+      field: "imageHappyDataUrl" as const,
+      label: "Laughing",
+      pick: (m: Member) => m.imageHappy,
+      mood: "happy" as const,
+    },
+    {
+      field: "imageSadDataUrl" as const,
+      label: "Crying",
+      pick: (m: Member) => m.imageSad,
+      mood: "sad" as const,
+    },
   ];
 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-zinc-500">
         Each member can have three sticker photos — normal, laughing, and crying — shown on
-        the display depending on whether they&rsquo;re winning or losing the race.
+        the display depending on whether they&rsquo;re winning or losing the race. Upload just
+        the normal one and use &ldquo;✨ AI&rdquo; under laughing/crying to generate the rest.
       </p>
       {members.map((m) => (
         <div
@@ -215,34 +244,44 @@ function MemberList({
           <div className="flex flex-wrap items-center gap-4">
             {PHOTO_SLOTS.map((slot) => {
               const current = slot.pick(m);
+              const generating = slot.mood && generatingKey === `${m.id}-${slot.mood}`;
               return (
-                <label
-                  key={slot.field}
-                  className="flex flex-col items-center gap-1 text-xs text-zinc-500 cursor-pointer"
-                >
-                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-50">
-                    {photoBusyId === m.id ? (
-                      <span className="text-[10px] text-zinc-400">…</span>
-                    ) : current ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={current} alt={slot.label} className="h-full w-full object-contain" />
-                    ) : (
-                      <span className="text-lg text-zinc-300">+</span>
-                    )}
-                  </span>
-                  {slot.label}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={photoBusyId === m.id}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) setPhoto(m.id, slot.field, file);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
+                <div key={slot.field} className="flex flex-col items-center gap-1">
+                  <label className="flex flex-col items-center gap-1 text-xs text-zinc-500 cursor-pointer">
+                    <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-50">
+                      {photoBusyId === m.id || generating ? (
+                        <span className="text-[10px] text-zinc-400">…</span>
+                      ) : current ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={current} alt={slot.label} className="h-full w-full object-contain" />
+                      ) : (
+                        <span className="text-lg text-zinc-300">+</span>
+                      )}
+                    </span>
+                    {slot.label}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={photoBusyId === m.id}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setPhoto(m.id, slot.field, file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  {slot.mood && m.image && (
+                    <button
+                      onClick={() => generateMood(m.id, slot.mood as "happy" | "sad")}
+                      disabled={!!generatingKey}
+                      className="text-[10px] text-zinc-400 underline disabled:opacity-50"
+                      title="Generate from the normal photo with AI"
+                    >
+                      {generating ? "Generating…" : "✨ AI"}
+                    </button>
+                  )}
+                </div>
               );
             })}
             {m.hasPassword && (
