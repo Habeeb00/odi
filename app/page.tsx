@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { unlockAdmin } from "@/lib/adminAuth";
+import { setIdentity } from "@/lib/identity";
 import type { Board } from "@/lib/types";
 
 export default function Home() {
@@ -33,6 +34,10 @@ export default function Home() {
       });
       setCreatedBoard(board);
       unlockAdmin(board.slug);
+      // The creator is already a member of their own board (see
+      // app/api/boards/route.ts) — sign them in as that member too, so
+      // they don't hit the raise page's join-code/password prompt.
+      if (board.creatorMemberId) setIdentity(board.slug, board.creatorMemberId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

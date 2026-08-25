@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { isAdminUnlocked, unlockAdmin } from "@/lib/adminAuth";
+import { setIdentity } from "@/lib/identity";
 
 export default function AdminLayout({
   children,
@@ -43,10 +44,14 @@ function AdminGate({ slug, onUnlocked }: { slug: string; onUnlocked: () => void 
     setBusy(true);
     setError(null);
     try {
-      await apiFetch(`/api/boards/${slug}/admin/verify`, {
-        method: "POST",
-        body: JSON.stringify({ code }),
-      });
+      // Verifying admin access also logs the admin in as their own member
+      // (see app/api/boards/[slug]/admin/verify) — no separate join-code
+      // check needed since they're already a member of their own board.
+      const { memberId } = await apiFetch<{ memberId: string | null }>(
+        `/api/boards/${slug}/admin/verify`,
+        { method: "POST", body: JSON.stringify({ code }) }
+      );
+      if (memberId) setIdentity(slug, memberId);
       onUnlocked();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to verify code");

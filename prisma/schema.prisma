@@ -30,6 +30,11 @@ model Board {
   // joinCode: it's backfilled below for boards created before this field.
   adminCode           String?  @unique
   createdBy           String
+  // The Member standing in for `createdBy` — set at creation so the admin
+  // is always a board member too, not just a name. Plain id, not a Prisma
+  // relation, so deleting that Member doesn't need special-casing here.
+  // Null for boards created before this existed.
+  creatorMemberId     String?
   votingDurationHours Int      @default(24)
   dailyOdLimit        Int      @default(3)
   createdAt           DateTime @default(now())

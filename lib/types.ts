@@ -26,6 +26,10 @@ export type Board = {
   // it from admin settings — never on a general board read.
   adminCode?: string;
   createdBy: string;
+  // The member row standing in for whoever created the board — set at
+  // creation so the admin is always a member too, not just a name in
+  // `createdBy`. Null for boards created before this existed.
+  creatorMemberId: string | null;
   votingDurationHours: number;
   dailyOdLimit: number;
   members: Member[];

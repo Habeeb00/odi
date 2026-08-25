@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useBoard } from "@/lib/useBoard";
 import { apiFetch } from "@/lib/api";
-import { getIdentity, clearIdentity } from "@/lib/identity";
+import { getIdentity, setIdentity, clearIdentity } from "@/lib/identity";
+import { isAdminUnlocked } from "@/lib/adminAuth";
 import IdentityPicker from "@/components/IdentityPicker";
 
 const TABS = [
@@ -29,7 +30,27 @@ export default function BoardLayout({
   const [picking, setPicking] = useState(false);
 
   useEffect(() => {
-    setMemberId(getIdentity(slug));
+    let cancelled = false;
+    const existing = getIdentity(slug);
+    if (existing || !isAdminUnlocked(slug)) {
+      setMemberId(existing);
+      return;
+    }
+    // Same admin-is-already-a-member shortcut as the raise page — resolve
+    // identity from the admin session instead of showing "Who am I?".
+    apiFetch<{ memberId: string }>(`/api/boards/${slug}/admin/self`, { method: "POST" })
+      .then(({ memberId }) => {
+        if (!cancelled) {
+          setIdentity(slug, memberId);
+          setMemberId(memberId);
+        }
+      })
+      .catch(() => {
+        // No member linked to this admin (older board) — stays "Who am I?".
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
   async function signOut() {

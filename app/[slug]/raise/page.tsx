@@ -6,7 +6,8 @@ import RaiseOdButton from "@/components/RaiseOdButton";
 import IdentityPicker from "@/components/IdentityPicker";
 import { useBoard } from "@/lib/useBoard";
 import { apiFetch } from "@/lib/api";
-import { getIdentity } from "@/lib/identity";
+import { getIdentity, setIdentity } from "@/lib/identity";
+import { isAdminUnlocked } from "@/lib/adminAuth";
 import type { OD } from "@/lib/types";
 
 const POLL_INTERVAL_MS = 4000;
@@ -36,18 +37,53 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
   );
 
   useEffect(() => {
-    const existing = getIdentity(slug);
-    setMemberId(existing);
-    setIdentityChecked(true);
+    let cancelled = false;
 
-    // Arriving via a share/invite link (?code=...) skips straight to the
-    // name picker with the join code pre-filled — no separate "Join with
-    // code" click needed.
-    const code = new URLSearchParams(window.location.search).get("code");
-    if (code) {
-      setInviteCode(code);
-      if (!existing) setPicking(true);
+    async function init() {
+      const existing = getIdentity(slug);
+      if (existing) {
+        setMemberId(existing);
+        setIdentityChecked(true);
+        return;
+      }
+
+      // An admin is already a member of their own board — if this browser
+      // already proved admin access, resolve straight to that membership
+      // instead of asking for a join code/password too.
+      if (isAdminUnlocked(slug)) {
+        try {
+          const { memberId } = await apiFetch<{ memberId: string }>(
+            `/api/boards/${slug}/admin/self`,
+            { method: "POST" }
+          );
+          if (!cancelled) {
+            setIdentity(slug, memberId);
+            setMemberId(memberId);
+            setIdentityChecked(true);
+            return;
+          }
+        } catch {
+          // Not linked to a member (older board) — fall through to the
+          // normal locked flow below.
+        }
+      }
+      if (cancelled) return;
+      setIdentityChecked(true);
+
+      // Arriving via a share/invite link (?code=...) skips straight to the
+      // name picker with the join code pre-filled — no separate "Join with
+      // code" click needed.
+      const code = new URLSearchParams(window.location.search).get("code");
+      if (code) {
+        setInviteCode(code);
+        setPicking(true);
+      }
     }
+
+    init();
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
   // Live feed: one request in flight at a time, with a hard timeout — see
