@@ -30,9 +30,14 @@ export default function BoardLayout({
     setMemberId(getIdentity(slug));
   }, [slug]);
 
+  const isDisplay = pathname.endsWith("/display");
+
   useEffect(() => {
-    if (board && !memberId) setPicking(true);
-  }, [board, memberId]);
+    // Don't force the login prompt open on the display screen — a passive
+    // viewer shouldn't get blocked by it; they can still tap "Who am I?" in
+    // the header to log in from there when they want to raise/vote.
+    if (board && !memberId && !isDisplay) setPicking(true);
+  }, [board, memberId, isDisplay]);
 
   if (loading) return <main className="p-8 text-zinc-500">Loading board...</main>;
   if (error || !board)
@@ -45,44 +50,37 @@ export default function BoardLayout({
       </main>
     );
 
-  const isDisplay = pathname.endsWith("/display");
-
   return (
     <div className="flex min-h-screen flex-col">
-      {!isDisplay && (
-        <header className="border-b border-zinc-200 px-6 py-4">
-          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
-            <Link href={`/${slug}`} className="text-lg font-bold">
-              Odi
-            </Link>
-            <nav className="flex flex-wrap gap-4 text-sm">
-              {TABS.map((t) => {
-                const href = `/${slug}${t.href}`;
-                const active = pathname === href;
-                return (
-                  <Link
-                    key={t.href}
-                    href={href}
-                    className={active ? "font-semibold underline" : "text-zinc-500 hover:text-black"}
-                  >
-                    {t.label}
-                  </Link>
-                );
-              })}
-            </nav>
-            {memberId && (
-              <button
-                onClick={() => setPicking(true)}
-                className="text-xs text-zinc-500 underline"
-              >
-                {board.members.find((m) => m.id === memberId)?.name ?? "Who am I?"}
-              </button>
-            )}
-          </div>
-        </header>
-      )}
+      <header className="border-b border-zinc-200 px-6 py-4">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
+          <Link href={`/${slug}`} className="text-lg font-bold">
+            Odi
+          </Link>
+          <nav className="flex flex-wrap gap-4 text-sm">
+            {TABS.map((t) => {
+              const href = `/${slug}${t.href}`;
+              const active = pathname === href;
+              return (
+                <Link
+                  key={t.href}
+                  href={href}
+                  className={active ? "font-semibold underline" : "text-zinc-500 hover:text-black"}
+                >
+                  {t.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <button onClick={() => setPicking(true)} className="text-xs text-zinc-500 underline">
+            {memberId
+              ? board.members.find((m) => m.id === memberId)?.name ?? "Who am I?"
+              : "Who am I?"}
+          </button>
+        </div>
+      </header>
 
-      {picking && !isDisplay && (
+      {picking && (
         <IdentityPicker
           slug={slug}
           members={board.members}
@@ -91,7 +89,7 @@ export default function BoardLayout({
             setPicking(false);
           }}
           onClose={() => setPicking(false)}
-          canClose={!!memberId}
+          canClose={!!memberId || isDisplay}
         />
       )}
 

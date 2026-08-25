@@ -86,9 +86,25 @@ function MemberList({
   const [image, setImage] = useState<File | null>(null);
   const [imageHappy, setImageHappy] = useState<File | null>(null);
   const [imageSad, setImageSad] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageHappyPreview, setImageHappyPreview] = useState<string | null>(null);
+  const [imageSadPreview, setImageSadPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
+
+  function pickFile(
+    setFile: (f: File | null) => void,
+    preview: string | null,
+    setPreview: (p: string | null) => void
+  ) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0] ?? null;
+      if (preview) URL.revokeObjectURL(preview);
+      setFile(file);
+      setPreview(file ? URL.createObjectURL(file) : null);
+    };
+  }
 
   async function facePhoto(file: File): Promise<string> {
     try {
@@ -116,6 +132,10 @@ function MemberList({
       setImage(null);
       setImageHappy(null);
       setImageSad(null);
+      [imagePreview, imageHappyPreview, imageSadPreview].forEach((p) => p && URL.revokeObjectURL(p));
+      setImagePreview(null);
+      setImageHappyPreview(null);
+      setImageSadPreview(null);
       onChange();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add member");
@@ -180,23 +200,39 @@ function MemberList({
             />
             <span>{m.name}</span>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {PHOTO_SLOTS.map((slot) => (
-              <label key={slot.field} className="text-sm text-zinc-500 underline cursor-pointer">
-                {photoBusyId === m.id ? "Uploading..." : slot.pick(m) ? slot.label : `+ ${slot.label}`}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={photoBusyId === m.id}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) setPhoto(m.id, slot.field, file);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-            ))}
+          <div className="flex flex-wrap items-center gap-4">
+            {PHOTO_SLOTS.map((slot) => {
+              const current = slot.pick(m);
+              return (
+                <label
+                  key={slot.field}
+                  className="flex flex-col items-center gap-1 text-xs text-zinc-500 cursor-pointer"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-50">
+                    {photoBusyId === m.id ? (
+                      <span className="text-[10px] text-zinc-400">…</span>
+                    ) : current ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={current} alt={slot.label} className="h-full w-full object-contain" />
+                    ) : (
+                      <span className="text-lg text-zinc-300">+</span>
+                    )}
+                  </span>
+                  {slot.label}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={photoBusyId === m.id}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setPhoto(m.id, slot.field, file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              );
+            })}
             <button onClick={() => remove(m.id)} className="text-sm text-red-600">
               Remove
             </button>
@@ -204,7 +240,7 @@ function MemberList({
         </div>
       ))}
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <form onSubmit={add} className="flex flex-col gap-2 rounded-md border border-zinc-200 p-3">
+      <form onSubmit={add} className="flex flex-col gap-3 rounded-md border border-zinc-200 p-3">
         <input
           className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
           placeholder="Member name"
@@ -212,25 +248,53 @@ function MemberList({
           onChange={(e) => setName(e.target.value)}
           required
         />
-        <div className="flex flex-wrap gap-3">
-          <label className="flex flex-col gap-1 text-xs text-zinc-500">
-            Normal photo
-            <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] ?? null)} />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-zinc-500">
-            Laughing photo (optional)
-            <input type="file" accept="image/*" onChange={(e) => setImageHappy(e.target.files?.[0] ?? null)} />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-zinc-500">
-            Crying photo (optional)
-            <input type="file" accept="image/*" onChange={(e) => setImageSad(e.target.files?.[0] ?? null)} />
-          </label>
+        <div className="flex flex-wrap gap-4">
+          <PhotoPickField
+            label="Normal photo"
+            preview={imagePreview}
+            onPick={pickFile(setImage, imagePreview, setImagePreview)}
+          />
+          <PhotoPickField
+            label="Laughing photo (optional)"
+            preview={imageHappyPreview}
+            onPick={pickFile(setImageHappy, imageHappyPreview, setImageHappyPreview)}
+          />
+          <PhotoPickField
+            label="Crying photo (optional)"
+            preview={imageSadPreview}
+            onPick={pickFile(setImageSad, imageSadPreview, setImageSadPreview)}
+          />
         </div>
         <button disabled={busy} className="self-start rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium">
           Add
         </button>
       </form>
     </div>
+  );
+}
+
+function PhotoPickField({
+  label,
+  preview,
+  onPick,
+}: {
+  label: string;
+  preview: string | null;
+  onPick: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <label className="flex flex-col items-center gap-1 text-xs text-zinc-500 cursor-pointer">
+      <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-50">
+        {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt={label} className="h-full w-full object-contain" />
+        ) : (
+          <span className="text-lg text-zinc-300">+</span>
+        )}
+      </span>
+      {label}
+      <input type="file" accept="image/*" className="hidden" onChange={onPick} />
+    </label>
   );
 }
 
