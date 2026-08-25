@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { apiFetch, fileToDataUrl } from "@/lib/api";
-import CyclingAvatar from "@/components/CyclingAvatar";
 import type { Board, Member, OD } from "@/lib/types";
 
 const ITEM_WIDTH = 96;
@@ -121,18 +120,20 @@ export default function RaiseOdButton({
                   accusedId === m.id ? "scale-110" : "opacity-50"
                 }`}
               >
-                <CyclingAvatar
-                  images={[m.image, m.imageHappy, m.imageSad]}
-                  alt={m.name}
-                  className={`h-20 w-20 object-contain transition ${
-                    accusedId === m.id ? "drop-shadow-[0_6px_10px_rgba(220,38,38,0.35)]" : ""
-                  }`}
-                  fallback={
-                    <span className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black text-zinc-700">
-                      {m.name[0]?.toUpperCase()}
-                    </span>
-                  }
-                />
+                {m.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={m.image}
+                    alt={m.name}
+                    className={`h-20 w-20 object-contain transition ${
+                      accusedId === m.id ? "drop-shadow-[0_6px_10px_rgba(220,38,38,0.35)]" : ""
+                    }`}
+                  />
+                ) : (
+                  <span className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black text-zinc-700">
+                    {m.name[0]?.toUpperCase()}
+                  </span>
+                )}
               </span>
               <span
                 className={`max-w-[90px] truncate text-xs ${
@@ -178,16 +179,18 @@ export default function RaiseOdButton({
                 pressed ? "translate-y-[calc(-50%+var(--press-shift))] scale-95" : "-translate-y-1/2"
               }`}
             >
-              <CyclingAvatar
-                images={[accused.image, accused.imageHappy, accused.imageSad]}
-                alt={accused.name}
-                className="h-24 w-24 object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.35)] sm:h-36 sm:w-36"
-                fallback={
-                  <span className="text-4xl font-black text-white drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)] sm:text-6xl">
-                    {accused.name[0]?.toUpperCase()}
-                  </span>
-                }
-              />
+              {accused.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={accused.image}
+                  alt={accused.name}
+                  className="h-24 w-24 object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.35)] sm:h-36 sm:w-36"
+                />
+              ) : (
+                <span className="text-4xl font-black text-white drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)] sm:text-6xl">
+                  {accused.name[0]?.toUpperCase()}
+                </span>
+              )}
             </span>
           )}
         </span>

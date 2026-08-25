@@ -25,16 +25,37 @@ const POLL_TIMEOUT_MS = 8000;
 export default function DisplayPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [pendingOds, setPendingOds] = useState<OD[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [screen, setScreen] = useState<Screen>("leaderboard");
   const [activeOd, setActiveOd] = useState<OdWithAsset | null>(null);
   const [stale, setStale] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState<LeaderboardEntry | null>(null);
+  const [flashes, setFlashes] = useState<Record<string, number>>({});
 
   const seenRaisedId = useRef<string | null | undefined>(undefined);
   const seenClosedId = useRef<string | null | undefined>(undefined);
   const animating = useRef(false);
   const idleCycles = useRef(0);
+  const lastScores = useRef<Map<string, number>>(new Map());
+
+  // Live scores move as votes land (see lib/od.ts getLeaderboard), so a
+  // score going up here doesn't necessarily mean a case closed — flash a
+  // "+N XP" popup on whoever's total just increased, closed or not.
+  function applyLeaderboard(entries: LeaderboardEntry[]) {
+    const bumped: Record<string, number> = {};
+    for (const m of entries) {
+      const prev = lastScores.current.get(m.id);
+      if (prev !== undefined && m.score > prev) bumped[m.id] = m.score - prev;
+      lastScores.current.set(m.id, m.score);
+    }
+    if (Object.keys(bumped).length > 0) {
+      setFlashes(bumped);
+      setTimeout(() => setFlashes({}), 1800);
+    }
+    setLeaderboard(entries);
+  }
 
   useEffect(() => {
     let stopped = false;
@@ -47,18 +68,21 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
       const controller = new AbortController();
       const abortTimer = setTimeout(() => controller.abort(), POLL_TIMEOUT_MS);
       try {
-        const data = await apiFetch<StateResponse>(`/api/boards/${slug}/state`, {
-          signal: controller.signal,
-        });
+        const [data, pending] = await Promise.all([
+          apiFetch<StateResponse>(`/api/boards/${slug}/state`, { signal: controller.signal }),
+          apiFetch<OD[]>(`/api/boards/${slug}/ods?status=PENDING`, { signal: controller.signal }),
+        ]);
         if (stopped) return;
         setStale(false);
+        setLoading(false);
         setPendingCount(data.pendingCount);
+        setPendingOds(pending);
 
         const firstLoad = seenRaisedId.current === undefined;
         if (firstLoad) {
           seenRaisedId.current = data.latestRaised?.id ?? null;
           seenClosedId.current = data.latestClosed?.id ?? null;
-          setLeaderboard(data.leaderboard);
+          applyLeaderboard(data.leaderboard);
           return;
         }
 
@@ -82,7 +106,7 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
           idleCycles.current = 0;
           runPendingReminder(data.latestRaised);
         } else {
-          setLeaderboard(data.leaderboard);
+          applyLeaderboard(data.leaderboard);
         }
       } catch {
         if (!stopped) setStale(true);
@@ -100,7 +124,7 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
         setScreen("pending");
         setTimeout(() => {
           setScreen("leaderboard");
-          setLeaderboard(nextLeaderboard);
+          applyLeaderboard(nextLeaderboard);
           animating.current = false;
         }, 6000);
       }, 2500);
@@ -122,7 +146,7 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
       setScreen("verdict");
       setTimeout(() => {
         setScreen("leaderboard");
-        setLeaderboard(nextLeaderboard);
+        applyLeaderboard(nextLeaderboard);
         animating.current = false;
       }, 6000);
     }
@@ -134,14 +158,35 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
     };
   }, [slug]);
 
+  const cryingIds = new Set(pendingOds.map((od) => od.accusedId));
+  const laughingIds = new Set(pendingOds.map((od) => od.raisedById));
+  const topScore = Math.max(0, ...leaderboard.map((m) => m.score));
+
+  function photoFor(m: LeaderboardEntry): string | null {
+    // Live status wins over standing: getting judged right now shows up
+    // immediately as crying, OD-ing someone right now shows up as laughing.
+    if (cryingIds.has(m.id)) return m.imageSad ?? m.image;
+    if (laughingIds.has(m.id)) return m.imageHappy ?? m.image;
+    if (m.score > 0 && m.score === topScore) return m.imageHappy ?? m.image;
+    return m.image;
+  }
+
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center bg-white p-4 sm:p-10">
       {stale && (
         <p className="absolute top-2 right-3 text-xs text-zinc-400">Reconnecting…</p>
       )}
-      {screen === "leaderboard" && (
+      {loading && (
+        <p className="text-sm text-zinc-400">Loading leaderboard…</p>
+      )}
+      {!loading && screen === "leaderboard" && (
         <div className="w-full max-w-4xl px-4 sm:px-0">
-          <RaceLeaderboard entries={leaderboard} onSelectMember={setSelectedMember} />
+          <RaceLeaderboard
+            entries={leaderboard}
+            onSelectMember={setSelectedMember}
+            photoFor={photoFor}
+            flashFor={(id) => flashes[id] ?? null}
+          />
         </div>
       )}
       {screen === "detected" && activeOd && <Detected od={activeOd} />}

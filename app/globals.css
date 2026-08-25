@@ -26,3 +26,23 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Floating "+N XP" popup on the display race bar when a vote lands. */
+@keyframes flash-up {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -130%) scale(1.1);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -160%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -220%) scale(1);
+  }
+}
