@@ -4,11 +4,11 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useBoard } from "@/lib/useBoard";
+import { apiFetch } from "@/lib/api";
 import { getIdentity, setIdentity } from "@/lib/identity";
 
 const TABS = [
   { href: "", label: "Home" },
-  { href: "/leaderboard", label: "Leaderboard" },
   { href: "/display", label: "Display" },
   { href: "/admin", label: "Admin" },
 ];
@@ -53,7 +53,7 @@ export default function BoardLayout({
         <header className="border-b border-zinc-200 px-6 py-4">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
             <Link href={`/${slug}`} className="text-lg font-bold">
-              {board.name}
+              Odi
             </Link>
             <nav className="flex flex-wrap gap-4 text-sm">
               {TABS.map((t) => {
@@ -113,6 +113,33 @@ function IdentityPicker({
   onClose: () => void;
   canClose: boolean;
 }) {
+  const [code, setCode] = useState("");
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function login(memberId: string) {
+    setPickedId(memberId);
+    setError(null);
+    if (!code.trim()) {
+      setError("Enter the board's join code first.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await apiFetch(`/api/boards/${slug}/login`, {
+        method: "POST",
+        body: JSON.stringify({ code, memberId }),
+      });
+      setIdentity(slug, memberId);
+      onPicked(memberId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to log in");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
       <div className="w-full max-w-sm rounded-lg bg-white p-6">
@@ -124,6 +151,16 @@ function IdentityPicker({
             </button>
           )}
         </div>
+        <label className="mb-4 flex flex-col gap-1">
+          <span className="text-sm font-medium">Join code</span>
+          <input
+            autoFocus
+            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-center font-mono uppercase tracking-widest outline-none focus:border-black"
+            placeholder="AB12CD"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+        </label>
         <div className="flex flex-col gap-2">
           {members.length === 0 && (
             <p className="text-sm text-zinc-500">No members yet — add some in Admin.</p>
@@ -131,16 +168,15 @@ function IdentityPicker({
           {members.map((m) => (
             <button
               key={m.id}
-              onClick={() => {
-                setIdentity(slug, m.id);
-                onPicked(m.id);
-              }}
-              className="rounded-md border border-zinc-200 px-4 py-3 text-left font-medium hover:bg-zinc-50"
+              disabled={busy}
+              onClick={() => login(m.id)}
+              className="rounded-md border border-zinc-200 px-4 py-3 text-left font-medium hover:bg-zinc-50 disabled:opacity-50"
             >
-              {m.name}
+              {busy && pickedId === m.id ? "Checking..." : m.name}
             </button>
           ))}
         </div>
+        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       </div>
     </div>
   );

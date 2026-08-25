@@ -19,13 +19,17 @@ type Screen = "leaderboard" | "detected" | "pending" | "verdict";
 
 const VOTE_LABEL: Record<string, string> = { OD: "OD", SMALL_OD: "Small OD", REJECT: "Reject" };
 
+const POLL_INTERVAL_MS = 4000;
+const POLL_TIMEOUT_MS = 8000;
+
 export default function DisplayPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  const [boardName, setBoardName] = useState("Oddy Board");
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [screen, setScreen] = useState<Screen>("leaderboard");
   const [activeOd, setActiveOd] = useState<OdWithAsset | null>(null);
+  const [stale, setStale] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<LeaderboardEntry | null>(null);
 
   const seenRaisedId = useRef<string | null | undefined>(undefined);
   const seenClosedId = useRef<string | null | undefined>(undefined);
@@ -34,12 +38,20 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
 
   useEffect(() => {
     let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
+    // One request in flight at a time, with a hard timeout — a slow/hung
+    // request used to overlap with the next 4s tick, piling up concurrent
+    // requests against the DB's connection limit until every poll stalled.
     async function poll() {
+      const controller = new AbortController();
+      const abortTimer = setTimeout(() => controller.abort(), POLL_TIMEOUT_MS);
       try {
-        const data = await apiFetch<StateResponse>(`/api/boards/${slug}/state`);
+        const data = await apiFetch<StateResponse>(`/api/boards/${slug}/state`, {
+          signal: controller.signal,
+        });
         if (stopped) return;
-        setBoardName(data.board.name);
+        setStale(false);
         setPendingCount(data.pendingCount);
 
         const firstLoad = seenRaisedId.current === undefined;
@@ -73,7 +85,10 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
           setLeaderboard(data.leaderboard);
         }
       } catch {
-        // display keeps trying on the next tick
+        if (!stopped) setStale(true);
+      } finally {
+        clearTimeout(abortTimer);
+        if (!stopped) timer = setTimeout(poll, POLL_INTERVAL_MS);
       }
     }
 
@@ -113,71 +128,98 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
     }
 
     poll();
-    const interval = setInterval(poll, 4000);
     return () => {
       stopped = true;
-      clearInterval(interval);
+      clearTimeout(timer);
     };
   }, [slug]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-white p-4 sm:p-10">
-      {screen === "leaderboard" && <Leaderboard boardName={boardName} entries={leaderboard} pendingCount={pendingCount} />}
+    <main className="relative flex min-h-screen flex-col items-center justify-center bg-white p-4 sm:p-10">
+      {stale && (
+        <p className="absolute top-2 right-3 text-xs text-zinc-400">Reconnecting…</p>
+      )}
+      {screen === "leaderboard" && (
+        <Leaderboard
+          entries={leaderboard}
+          pendingCount={pendingCount}
+          onSelectMember={setSelectedMember}
+        />
+      )}
       {screen === "detected" && activeOd && <Detected od={activeOd} />}
       {screen === "pending" && activeOd && <PendingCase od={activeOd} />}
       {screen === "verdict" && activeOd && <Verdict od={activeOd} />}
+
+      {selectedMember && (
+        <MemberOdsModal
+          slug={slug}
+          member={selectedMember}
+          onClose={() => setSelectedMember(null)}
+        />
+      )}
     </main>
   );
 }
 
+// Scores usually stay within a 0-100 range; once someone breaks 100 the
+// whole board "unlocks" a wider 0-500 range so bars don't all pin at 100%.
+function scoreRange(entries: LeaderboardEntry[]): number {
+  const actualMax = Math.max(0, ...entries.map((e) => e.score));
+  return actualMax > 100 ? 500 : 100;
+}
+
 function Leaderboard({
-  boardName,
   entries,
   pendingCount,
+  onSelectMember,
 }: {
-  boardName: string;
   entries: LeaderboardEntry[];
   pendingCount: number;
+  onSelectMember: (member: LeaderboardEntry) => void;
 }) {
-  const max = Math.max(1, ...entries.map((e) => e.score));
+  const range = scoreRange(entries);
   return (
     <div className="w-full max-w-4xl px-2 sm:px-0">
-      <h1 className="text-center text-3xl font-black tracking-tight sm:text-5xl">{boardName}</h1>
+      <h1 className="text-center text-3xl font-black tracking-tight sm:text-5xl">Odi</h1>
       {pendingCount > 0 && (
         <p className="mt-2 text-center text-sm text-zinc-500">
           {pendingCount} case{pendingCount === 1 ? "" : "s"} under investigation
         </p>
       )}
-      <div className="mt-6 flex flex-col gap-5 sm:mt-12 sm:gap-8">
+      <div className="mt-8 flex flex-col gap-6 sm:mt-14 sm:gap-10">
         {entries.map((m, i) => {
-          const pct = (Math.max(m.score, 0) / max) * 100;
+          const pct = Math.min(100, (Math.max(m.score, 0) / range) * 100);
           return (
-            <div key={m.id} className="flex items-center gap-2 sm:gap-4">
+            <button
+              key={m.id}
+              onClick={() => onSelectMember(m)}
+              className="flex items-center gap-2 text-left sm:gap-4"
+            >
               <span className="w-6 text-right text-lg font-black text-zinc-300 sm:w-8 sm:text-2xl">
                 {i + 1}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="mb-1 flex items-baseline justify-between gap-2 px-1">
-                  <span className="truncate text-base font-bold sm:text-xl">{m.name}</span>
-                  <span className="shrink-0 font-mono text-base sm:text-xl">{m.score}</span>
-                </div>
+                <p className="mb-1 truncate px-1 text-base font-bold sm:text-xl">{m.name}</p>
                 <div className="relative h-3 w-full rounded-full bg-zinc-100 [--avatar:44px] sm:[--avatar:72px]">
                   <div
                     className="h-3 rounded-full bg-black transition-all duration-1000 ease-out"
                     style={{ width: `${pct}%` }}
                   />
                   <div
-                    className="absolute top-1/2 -translate-y-1/2 transition-all duration-1000 ease-out"
+                    className="absolute top-1/2 h-[var(--avatar)] w-[var(--avatar)] -translate-y-1/2 transition-all duration-1000 ease-out"
                     style={{
                       left: `clamp(0px, calc(${pct}% - var(--avatar) / 2), calc(100% - var(--avatar)))`,
                     }}
                   >
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap font-mono text-xs font-bold sm:text-base">
+                      {m.score}
+                    </span>
                     <CyclingAvatar
                       images={[m.image, m.imageHappy, m.imageSad]}
                       alt={m.name}
-                      className="h-[var(--avatar)] w-[var(--avatar)] object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.25)]"
+                      className="h-full w-full object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.25)]"
                       fallback={
-                        <div className="flex h-[var(--avatar)] w-[var(--avatar)] items-center justify-center rounded-full bg-zinc-200 text-lg font-bold sm:text-2xl">
+                        <div className="flex h-full w-full items-center justify-center rounded-full bg-zinc-200 text-lg font-bold sm:text-2xl">
                           {m.name[0]?.toUpperCase()}
                         </div>
                       }
@@ -185,7 +227,7 @@ function Leaderboard({
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           );
         })}
         {entries.length === 0 && (
@@ -253,6 +295,64 @@ function Verdict({ od }: { od: OdWithAsset }) {
       </p>
       <p className="text-4xl font-black sm:text-6xl">{guilty ? "GUILTY" : "NOT AN OD"}</p>
       <p className="text-2xl font-bold sm:text-3xl">+{od.finalScore ?? 0} OD</p>
+    </div>
+  );
+}
+
+function MemberOdsModal({
+  slug,
+  member,
+  onClose,
+}: {
+  slug: string;
+  member: LeaderboardEntry;
+  onClose: () => void;
+}) {
+  const [ods, setOds] = useState<OD[] | null>(null);
+
+  useEffect(() => {
+    setOds(null);
+    apiFetch<OD[]>(`/api/boards/${slug}/ods?status=CLOSED&accusedId=${member.id}`).then(setOds);
+  }, [slug, member.id]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold">{member.name}&rsquo;s closed ODs</h2>
+          <button onClick={onClose} className="text-sm text-zinc-500">
+            Close
+          </button>
+        </div>
+
+        {ods === null && <p className="mt-4 text-sm text-zinc-500">Loading...</p>}
+        {ods && ods.length === 0 && (
+          <p className="mt-4 text-sm text-zinc-500">No closed ODs yet.</p>
+        )}
+        {ods && ods.length > 0 && (
+          <ul className="mt-4 flex flex-col gap-3">
+            {ods.map((od) => (
+              <li key={od.id} className="rounded-md border border-zinc-200 p-3 text-sm">
+                <div className="flex items-baseline justify-between">
+                  <span className="font-semibold">{od.category.name}</span>
+                  <span className="font-mono text-zinc-500">+{od.finalScore ?? 0}</span>
+                </div>
+                <p className="mt-1 text-zinc-600">{od.description}</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Raised by {od.raisedBy.name} &middot;{" "}
+                  {new Date(od.createdAt).toLocaleDateString()}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

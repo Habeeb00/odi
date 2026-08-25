@@ -91,7 +91,7 @@ export default function BoardHome({ params }: { params: Promise<{ slug: string }
       <div>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">OD under investigation</h1>
-          <Link href={`/${slug}/leaderboard`} className="text-sm underline">
+          <Link href={`/${slug}/display`} className="text-sm underline">
             View leaderboard →
           </Link>
         </div>

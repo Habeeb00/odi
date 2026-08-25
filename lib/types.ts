@@ -19,6 +19,9 @@ export type Board = {
   name: string;
   slug: string;
   joinCode: string | null;
+  // Only present in the create-board response, or right after regenerating
+  // it from admin settings — never on a general board read.
+  adminCode?: string;
   createdBy: string;
   votingDurationHours: number;
   dailyOdLimit: number;

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { closeExpiredOds } from "@/lib/od";
 import { validateImageDataUrl } from "@/lib/upload";
 import { serializeOd } from "@/lib/media";
+import { getMemberIdForBoard } from "@/lib/session";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -30,20 +31,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   try {
     const { slug } = await params;
     const body = await req.json();
-    const { raisedById, accusedId, categoryId, description } = body;
+    const { accusedId, categoryId, description } = body;
 
-    if (!raisedById || !accusedId || !categoryId || !description?.trim()) {
+    if (!accusedId || !categoryId || !description?.trim()) {
       return NextResponse.json(
-        { error: "raisedById, accusedId, categoryId and description are required" },
+        { error: "accusedId, categoryId and description are required" },
         { status: 400 }
       );
-    }
-    if (raisedById === accusedId) {
-      return NextResponse.json({ error: "You can't raise an OD against yourself" }, { status: 400 });
     }
 
     const board = await prisma.board.findUnique({ where: { slug } });
     if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
+
+    const raisedById = getMemberIdForBoard(req, board.id);
+    if (!raisedById) {
+      return NextResponse.json({ error: "Log in to raise an OD" }, { status: 401 });
+    }
+    if (raisedById === accusedId) {
+      return NextResponse.json({ error: "You can't raise an OD against yourself" }, { status: 400 });
+    }
 
     await closeExpiredOds(board.id);
 

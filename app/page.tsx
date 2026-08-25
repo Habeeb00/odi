@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { unlockAdmin } from "@/lib/adminAuth";
 import type { Board } from "@/lib/types";
 
 export default function Home() {
@@ -31,6 +32,7 @@ export default function Home() {
         body: JSON.stringify({ name, createdBy, memberNames }),
       });
       setCreatedBoard(board);
+      unlockAdmin(board.slug);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -70,6 +72,13 @@ export default function Home() {
         </p>
         <div className="rounded-md border border-zinc-300 px-4 py-6 text-center font-mono text-3xl font-bold tracking-widest">
           {createdBoard.joinCode}
+        </div>
+        <p className="text-zinc-500">
+          Keep this admin code to yourself — it&rsquo;s the only way into board settings,
+          separate from the join code above.
+        </p>
+        <div className="rounded-md border-2 border-black px-4 py-6 text-center font-mono text-3xl font-bold tracking-widest">
+          {createdBoard.adminCode}
         </div>
         <button
           onClick={() => router.push(`/${createdBoard.slug}`)}

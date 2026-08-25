@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseMemberImageFields } from "@/lib/upload";
 import { memberImageUrl } from "@/lib/media";
+import { isAdminForBoard } from "@/lib/session";
 
 export async function PATCH(
   req: NextRequest,
@@ -9,6 +10,12 @@ export async function PATCH(
 ) {
   try {
     const { memberId } = await params;
+    const existing = await prisma.member.findUnique({ where: { id: memberId } });
+    if (!existing) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+    if (!isAdminForBoard(req, existing.boardId)) {
+      return NextResponse.json({ error: "Admin code required" }, { status: 401 });
+    }
+
     const body = await req.json();
     const data: Record<string, unknown> = {};
 
@@ -31,11 +38,17 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ slug: string; memberId: string }> }
 ) {
   try {
     const { memberId } = await params;
+    const existing = await prisma.member.findUnique({ where: { id: memberId } });
+    if (!existing) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+    if (!isAdminForBoard(req, existing.boardId)) {
+      return NextResponse.json({ error: "Admin code required" }, { status: 401 });
+    }
+
     await prisma.member.delete({ where: { id: memberId } });
     return NextResponse.json({ ok: true });
   } catch (err) {

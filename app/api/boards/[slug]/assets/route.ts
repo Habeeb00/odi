@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateImageDataUrl } from "@/lib/upload";
 import { assetFileUrl } from "@/lib/media";
+import { isAdminForBoard } from "@/lib/session";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -26,6 +27,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
     const board = await prisma.board.findUnique({ where: { slug } });
     if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
+    if (!isAdminForBoard(req, board.id)) {
+      return NextResponse.json({ error: "Admin code required" }, { status: 401 });
+    }
 
     const category = await prisma.category.findFirst({ where: { id: categoryId, boardId: board.id } });
     if (!category) return NextResponse.json({ error: "Category not found on this board" }, { status: 400 });
