@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useBoard } from "@/lib/useBoard";
 import { apiFetch, fileToDataUrl } from "@/lib/api";
 import { cropToFace } from "@/lib/faceCrop";
+import { generateMoodSticker } from "@/lib/moodSticker";
 import type { Asset, Board, Category, Member, OD } from "@/lib/types";
 
 export default function AdminPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -227,14 +228,17 @@ function MemberList({
     }
   }
 
-  async function generateMood(id: string, mood: "happy" | "sad") {
-    const key = `${id}-${mood}`;
+  async function generateMood(member: Member, mood: "happy" | "sad") {
+    if (!member.image) return;
+    const key = `${member.id}-${mood}`;
     setGeneratingKey(key);
     setError(null);
     try {
-      await apiFetch(`/api/boards/${slug}/members/${id}/generate-mood`, {
-        method: "POST",
-        body: JSON.stringify({ mood }),
+      const dataUrl = await generateMoodSticker(member.image, mood);
+      const field = mood === "happy" ? "imageHappyDataUrl" : "imageSadDataUrl";
+      await apiFetch(`/api/boards/${slug}/members/${member.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ [field]: dataUrl }),
       });
       onChange();
     } catch (err) {
@@ -265,7 +269,8 @@ function MemberList({
       <p className="text-sm text-zinc-500">
         Each member can have three sticker photos — normal, laughing, and crying — shown on
         the display depending on whether they&rsquo;re winning or losing the race. Upload just
-        the normal one and use &ldquo;✨ AI&rdquo; under laughing/crying to generate the rest.
+        the normal one and use &ldquo;✨ Auto&rdquo; under laughing/crying to generate the rest
+        (tints the photo and stamps an emoji on it — free, instant, no AI service needed).
       </p>
       {members.map((m) => (
         <div
@@ -318,12 +323,12 @@ function MemberList({
                   </label>
                   {slot.mood && m.image && (
                     <button
-                      onClick={() => generateMood(m.id, slot.mood as "happy" | "sad")}
+                      onClick={() => generateMood(m, slot.mood as "happy" | "sad")}
                       disabled={!!generatingKey}
                       className="text-[10px] text-zinc-400 underline disabled:opacity-50"
-                      title="Generate from the normal photo with AI"
+                      title="Tint the normal photo and stamp an emoji on it"
                     >
-                      {generating ? "Generating…" : "✨ AI"}
+                      {generating ? "Generating…" : "✨ Auto"}
                     </button>
                   )}
                 </div>
