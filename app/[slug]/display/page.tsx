@@ -140,11 +140,7 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
         <p className="absolute top-2 right-3 text-xs text-zinc-400">Reconnecting…</p>
       )}
       {screen === "leaderboard" && (
-        <Leaderboard
-          entries={leaderboard}
-          pendingCount={pendingCount}
-          onSelectMember={setSelectedMember}
-        />
+        <Leaderboard entries={leaderboard} onSelectMember={setSelectedMember} />
       )}
       {screen === "detected" && activeOd && <Detected od={activeOd} />}
       {screen === "pending" && activeOd && <PendingCase od={activeOd} />}
@@ -170,62 +166,43 @@ function scoreRange(entries: LeaderboardEntry[]): number {
 
 function Leaderboard({
   entries,
-  pendingCount,
   onSelectMember,
 }: {
   entries: LeaderboardEntry[];
-  pendingCount: number;
   onSelectMember: (member: LeaderboardEntry) => void;
 }) {
   const range = scoreRange(entries);
   return (
-    <div className="w-full max-w-4xl px-2 sm:px-0">
-      <h1 className="text-center text-3xl font-black tracking-tight sm:text-5xl">Odi</h1>
-      {pendingCount > 0 && (
-        <p className="mt-2 text-center text-sm text-zinc-500">
-          {pendingCount} case{pendingCount === 1 ? "" : "s"} under investigation
-        </p>
-      )}
-      <div className="mt-8 flex flex-col gap-6 sm:mt-14 sm:gap-10">
-        {entries.map((m, i) => {
+    <div className="w-full max-w-4xl px-4 sm:px-0">
+      <div className="flex flex-col gap-8 sm:gap-12">
+        {entries.map((m) => {
           const pct = Math.min(100, (Math.max(m.score, 0) / range) * 100);
           return (
             <button
               key={m.id}
               onClick={() => onSelectMember(m)}
-              className="flex items-center gap-2 text-left sm:gap-4"
+              className="relative h-1.5 w-full rounded-full bg-zinc-200 [--avatar:44px] sm:[--avatar:72px]"
             >
-              <span className="w-6 text-right text-lg font-black text-zinc-300 sm:w-8 sm:text-2xl">
-                {i + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="mb-1 truncate px-1 text-base font-bold sm:text-xl">{m.name}</p>
-                <div className="relative h-3 w-full rounded-full bg-zinc-100 [--avatar:44px] sm:[--avatar:72px]">
-                  <div
-                    className="h-3 rounded-full bg-black transition-all duration-1000 ease-out"
-                    style={{ width: `${pct}%` }}
-                  />
-                  <div
-                    className="absolute top-1/2 h-[var(--avatar)] w-[var(--avatar)] -translate-y-1/2 transition-all duration-1000 ease-out"
-                    style={{
-                      left: `clamp(0px, calc(${pct}% - var(--avatar) / 2), calc(100% - var(--avatar)))`,
-                    }}
-                  >
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap font-mono text-xs font-bold sm:text-base">
-                      {m.score}
-                    </span>
-                    <CyclingAvatar
-                      images={[m.image, m.imageHappy, m.imageSad]}
-                      alt={m.name}
-                      className="h-full w-full object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.25)]"
-                      fallback={
-                        <div className="flex h-full w-full items-center justify-center rounded-full bg-zinc-200 text-lg font-bold sm:text-2xl">
-                          {m.name[0]?.toUpperCase()}
-                        </div>
-                      }
-                    />
-                  </div>
-                </div>
+              <div
+                className="h-1.5 rounded-full bg-red-600 transition-all duration-1000 ease-out"
+                style={{ width: `${pct}%` }}
+              />
+              <div
+                className="absolute top-1/2 h-[var(--avatar)] w-[var(--avatar)] -translate-y-1/2 transition-all duration-1000 ease-out"
+                style={{
+                  left: `clamp(0px, calc(${pct}% - var(--avatar) / 2), calc(100% - var(--avatar)))`,
+                }}
+              >
+                <CyclingAvatar
+                  images={[m.image, m.imageHappy, m.imageSad]}
+                  alt={m.name}
+                  className="h-full w-full object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.25)]"
+                  fallback={
+                    <div className="flex h-full w-full items-center justify-center rounded-full bg-zinc-200 text-lg font-bold sm:text-2xl">
+                      {m.name[0]?.toUpperCase()}
+                    </div>
+                  }
+                />
               </div>
             </button>
           );
