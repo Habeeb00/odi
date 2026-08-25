@@ -28,11 +28,14 @@ export default function AdminPage({ params }: { params: Promise<{ slug: string }
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Board admin</h1>
-        <Link href={`/${slug}/admin/test`} className="text-sm underline">
-          Test mode →
-        </Link>
+        <div className="flex items-center gap-4">
+          <ShareInviteButton slug={slug} board={board} />
+          <Link href={`/${slug}/admin/test`} className="text-sm underline">
+            Test mode →
+          </Link>
+        </div>
       </div>
 
       <Section title="Members">
@@ -60,6 +63,48 @@ export default function AdminPage({ params }: { params: Promise<{ slug: string }
         <SettingsForm slug={slug} board={board} onChange={refetch} />
       </Section>
     </main>
+  );
+}
+
+// Bundles the join code into the raise-page link itself, so whoever opens
+// it lands straight on the name picker with the code already filled in —
+// no copy-pasting a code into a separate field.
+function ShareInviteButton({ slug, board }: { slug: string; board: Board }) {
+  const [shared, setShared] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!board.joinCode) return null;
+
+  async function shareInvite() {
+    const url = `${window.location.origin}/${slug}/raise?code=${board.joinCode}`;
+    setError(null);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Join ${board.name} on ഒടി`, url });
+      } catch {
+        // User cancelled the share sheet — not an error.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      setError("Couldn't copy the invite link");
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={shareInvite}
+        className="rounded-md bg-black px-4 py-2 text-sm font-semibold text-white"
+      >
+        {shared ? "Copied!" : "Share invite"}
+      </button>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+    </div>
   );
 }
 
@@ -572,7 +617,6 @@ function SettingsForm({
   const [regeneratingAdmin, setRegeneratingAdmin] = useState(false);
   const [newAdminCode, setNewAdminCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [shared, setShared] = useState(false);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -622,43 +666,11 @@ function SettingsForm({
     }
   }
 
-  // Bundles the join code into the raise-page link itself, so whoever
-  // opens it lands straight on the name picker with the code already
-  // filled in — no copy-pasting a code into a separate field.
-  async function shareInvite() {
-    if (!board.joinCode) return;
-    const url = `${window.location.origin}/${slug}/raise?code=${board.joinCode}`;
-    setError(null);
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `Join ${board.name} on ഒടി`, url });
-      } catch {
-        // User cancelled the share sheet — not an error.
-      }
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setShared(true);
-      setTimeout(() => setShared(false), 2000);
-    } catch {
-      setError("Couldn't copy the invite link");
-    }
-  }
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-4 py-3">
         <span className="text-sm">Join code:</span>
         <span className="font-mono font-bold tracking-widest">{board.joinCode ?? "not set"}</span>
-        {board.joinCode && (
-          <button
-            onClick={shareInvite}
-            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium"
-          >
-            {shared ? "Copied!" : "Share invite"}
-          </button>
-        )}
         <button
           onClick={regenerateJoinCode}
           disabled={regenerating}
@@ -667,10 +679,6 @@ function SettingsForm({
           {regenerating ? "Generating..." : board.joinCode ? "Regenerate" : "Generate"}
         </button>
       </div>
-      <p className="-mt-2 text-xs text-zinc-500">
-        Share invite sends a link straight to the raise page with the join code built in — new
-        members just pick their name and set a password.
-      </p>
 
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-4 py-3">
         <span className="text-sm">Admin code:</span>

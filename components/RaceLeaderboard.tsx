@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { LeaderboardEntry } from "@/lib/types";
 
 // Scores usually stay within a 0-100 range; once someone breaks 100 the
@@ -26,11 +27,25 @@ export default function RaceLeaderboard({
   flashFor?: (memberId: string) => number | null;
 }) {
   const range = scoreRange(entries);
+
+  // On first mount every bar starts at 0 and races up to its real score a
+  // beat later — the CSS transition below does the animating, this just
+  // withholds the real width for one frame so there's a "from zero" state
+  // to transition from.
+  const [started, setStarted] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setStarted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   return (
     <div className="w-full">
       <div className="flex flex-col gap-5 sm:gap-8">
-        {entries.map((m) => {
-          const pct = Math.min(100, (Math.max(m.score, 0) / range) * 100);
+        {entries.map((m, i) => {
+          const pct = started ? Math.min(100, (Math.max(m.score, 0) / range) * 100) : 0;
+          // Staggered start so the bars feel like they're leaving the gate
+          // one after another, not snapping into place all at once.
+          const raceDelay = `${Math.min(i * 80, 400)}ms`;
           const flash = flashFor?.(m.id) ?? null;
           // A score bump briefly overrides whatever photoFor would normally
           // show (crying/leading/etc) with the laughing photo, and grows
@@ -44,7 +59,7 @@ export default function RaceLeaderboard({
             >
               <div
                 className="h-1.5 rounded-full bg-red-600 transition-all duration-1000 ease-out"
-                style={{ width: `${pct}%` }}
+                style={{ width: `${pct}%`, transitionDelay: raceDelay }}
               />
               <div
                 className={`absolute top-1/2 h-[var(--avatar)] w-[var(--avatar)] -translate-y-1/2 transition-all duration-1000 ease-out ${
@@ -52,6 +67,7 @@ export default function RaceLeaderboard({
                 }`}
                 style={{
                   left: `clamp(0px, calc(${pct}% - var(--avatar) / 2), calc(100% - var(--avatar)))`,
+                  transitionDelay: raceDelay,
                 }}
               >
                 {flash !== null && (

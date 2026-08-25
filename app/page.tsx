@@ -91,13 +91,46 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-12 px-6 py-16">
-      <header>
-        <h1 className="text-4xl font-black tracking-tight">Oddy Board</h1>
-        <p className="mt-2 text-zinc-500">
-          The leaderboard for chathis. Raise an OD, let the group judge it.
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-16 px-6 py-16">
+      <header className="flex flex-col items-center gap-4 text-center">
+        <h1 className="text-5xl font-black tracking-tight">ഒടി</h1>
+        <p className="text-lg text-zinc-600">
+          The leaderboard for your friend circle&rsquo;s chathis.
+        </p>
+        <p className="text-sm text-zinc-500">
+          Someone pulls an OD. The group votes on it. The board keeps score — forever, in public,
+          for everyone to see.
         </p>
       </header>
+
+      <section className="flex flex-col gap-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+          How it works
+        </h2>
+        <ol className="flex flex-col gap-3 text-sm text-zinc-600">
+          <li className="flex gap-3">
+            <span className="font-mono font-bold text-black">1</span>
+            <span>
+              <strong className="text-black">Raise an OD</strong> — call out what someone did,
+              with a description or a screenshot.
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-mono font-bold text-black">2</span>
+            <span>
+              <strong className="text-black">The group votes</strong> — OD, small OD, or reject,
+              within the board&rsquo;s voting window.
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-mono font-bold text-black">3</span>
+            <span>
+              <strong className="text-black">The board keeps score</strong> — a public
+              leaderboard everyone can watch race in real time.
+            </span>
+          </li>
+        </ol>
+      </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
