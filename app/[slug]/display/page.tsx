@@ -223,9 +223,9 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
 
 function EventToast({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-3 z-40 flex justify-center px-3 sm:top-6">
+    <div className="pointer-events-none fixed inset-x-0 bottom-3 z-40 flex justify-center px-3 sm:bottom-6">
       <div
-        className="pointer-events-auto relative w-full max-w-sm animate-[toast-in_0.3s_ease-out] rounded-lg border border-zinc-200 bg-white p-4 shadow-lg"
+        className="pointer-events-auto relative w-full max-w-sm animate-[toast-in-bottom_0.3s_ease-out] rounded-lg border border-zinc-200 bg-white p-4 shadow-lg"
       >
         <button
           onClick={onClose}

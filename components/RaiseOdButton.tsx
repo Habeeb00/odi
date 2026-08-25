@@ -175,7 +175,7 @@ export default function RaiseOdButton({
           />
           {accused && (
             <span
-              className={`absolute left-1/2 top-[32%] flex h-24 w-24 -translate-x-1/2 items-center justify-center transition-transform duration-100 sm:h-36 sm:w-36 [--press-shift:30px] sm:[--press-shift:44px] ${
+              className={`absolute left-1/2 top-[32%] flex h-28 w-28 -translate-x-1/2 items-center justify-center transition-transform duration-100 sm:h-44 sm:w-44 [--press-shift:30px] sm:[--press-shift:44px] ${
                 pressed ? "translate-y-[calc(-50%+var(--press-shift))] scale-95" : "-translate-y-1/2"
               }`}
             >
@@ -184,7 +184,7 @@ export default function RaiseOdButton({
                 <img
                   src={accused.image}
                   alt={accused.name}
-                  className="h-24 w-24 object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.35)] sm:h-36 sm:w-36"
+                  className="h-28 w-28 object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.35)] sm:h-44 sm:w-44"
                 />
               ) : (
                 <span className="text-4xl font-black text-white drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)] sm:text-6xl">

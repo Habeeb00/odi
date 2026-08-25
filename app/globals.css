@@ -47,11 +47,11 @@ body {
   }
 }
 
-/* Display page OD-event notifications sliding in from the top. */
-@keyframes toast-in {
+/* Display page OD-event notifications sliding in from the bottom. */
+@keyframes toast-in-bottom {
   from {
     opacity: 0;
-    transform: translateY(-12px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
