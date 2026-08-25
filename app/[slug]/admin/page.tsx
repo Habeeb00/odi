@@ -1,22 +1,17 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import { useBoard } from "@/lib/useBoard";
 import { apiFetch, fileToDataUrl } from "@/lib/api";
 import { cropToFace } from "@/lib/faceCrop";
-import { isAdminUnlocked, unlockAdmin } from "@/lib/adminAuth";
 import type { Asset, Board, Category, Member, OD } from "@/lib/types";
 
 export default function AdminPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { board, refetch } = useBoard(slug);
-  const [unlocked, setUnlocked] = useState(false);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [pendingOds, setPendingOds] = useState<OD[]>([]);
-
-  useEffect(() => {
-    setUnlocked(isAdminUnlocked(slug));
-  }, [slug]);
 
   async function loadAssets() {
     setAssets(await apiFetch<Asset[]>(`/api/boards/${slug}/assets`));
@@ -25,28 +20,20 @@ export default function AdminPage({ params }: { params: Promise<{ slug: string }
     setPendingOds(await apiFetch<OD[]>(`/api/boards/${slug}/ods?status=PENDING`));
   }
   useEffect(() => {
-    if (!unlocked) return;
     loadAssets();
     loadPendingOds();
-  }, [slug, unlocked]);
+  }, [slug]);
 
   if (!board) return null;
 
-  if (!unlocked) {
-    return (
-      <AdminGate
-        slug={slug}
-        onUnlocked={() => {
-          unlockAdmin(slug);
-          setUnlocked(true);
-        }}
-      />
-    );
-  }
-
   return (
     <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
-      <h1 className="text-2xl font-bold">Board admin</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Board admin</h1>
+        <Link href={`/${slug}/admin/test`} className="text-sm underline">
+          Test mode →
+        </Link>
+      </div>
 
       <Section title="Members">
         <MemberList slug={slug} members={board.members} onChange={refetch} />
@@ -72,56 +59,6 @@ export default function AdminPage({ params }: { params: Promise<{ slug: string }
       <Section title="Settings">
         <SettingsForm slug={slug} board={board} onChange={refetch} />
       </Section>
-    </main>
-  );
-}
-
-function AdminGate({ slug, onUnlocked }: { slug: string; onUnlocked: () => void }) {
-  const [code, setCode] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      await apiFetch(`/api/boards/${slug}/admin/verify`, {
-        method: "POST",
-        body: JSON.stringify({ code }),
-      });
-      onUnlocked();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to verify code");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <main className="mx-auto flex min-h-[60vh] w-full max-w-sm flex-col justify-center gap-4 px-6">
-      <h1 className="text-xl font-bold">Admin access</h1>
-      <p className="text-sm text-zinc-500">
-        Enter this board&rsquo;s admin code — given to whoever created it, separate from the
-        join code members use.
-      </p>
-      <form onSubmit={submit} className="flex flex-col gap-3">
-        <input
-          autoFocus
-          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-center font-mono text-lg uppercase tracking-widest outline-none focus:border-black"
-          placeholder="ADMIN CODE"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          required
-        />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          disabled={busy}
-          className="rounded-md bg-black px-4 py-3 font-semibold text-white disabled:opacity-50"
-        >
-          {busy ? "Checking..." : "Unlock"}
-        </button>
-      </form>
     </main>
   );
 }

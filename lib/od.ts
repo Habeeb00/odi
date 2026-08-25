@@ -42,6 +42,17 @@ export async function closeOdNow(odId: string) {
   });
 }
 
+// Test-mode only: skip vote tallying entirely and close a pending OD with
+// whatever score the admin picked, so the verdict screen can be previewed
+// without waiting for real votes.
+export async function resolveOdForTesting(odId: string, finalScore: number) {
+  return prisma.oD.update({
+    where: { id: odId },
+    data: { status: "CLOSED", finalScore },
+    include: { raisedBy: true, accused: true, category: true, votes: true },
+  });
+}
+
 export async function getLeaderboard(boardId: string) {
   const [members, closedOds] = await Promise.all([
     prisma.member.findMany({ where: { boardId } }),
