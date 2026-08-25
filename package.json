@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@vercel/analytics": "^2.0.1",
     "face-api.js": "^0.22.2",
     "next": "16.3.1",
     "react": "19.2.8",
