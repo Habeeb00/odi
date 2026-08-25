@@ -189,24 +189,25 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
         </div>
       )}
 
-      {/* The leaderboard above stays visible the whole time — these are
-          overlays, not full-screen takeovers, so the race never disappears.
-          Closing (auto, on a timer) is what reveals the score bump/animation
+      {/* The leaderboard above stays visible and interactive the whole
+          time — these are toast notifications, not modals: no backdrop, no
+          click-catcher, nothing blocks the screen. Closing (auto, on a
+          timer, or by hand) is what reveals the score bump/animation
           underneath. */}
       {screen === "detected" && activeOd && (
-        <EventModal onClose={() => setScreen("leaderboard")}>
+        <EventToast onClose={() => setScreen("leaderboard")}>
           <Detected od={activeOd} />
-        </EventModal>
+        </EventToast>
       )}
       {screen === "pending" && activeOd && (
-        <EventModal onClose={() => setScreen("leaderboard")}>
+        <EventToast onClose={() => setScreen("leaderboard")}>
           <PendingCase od={activeOd} />
-        </EventModal>
+        </EventToast>
       )}
       {screen === "verdict" && activeOd && (
-        <EventModal onClose={() => setScreen("leaderboard")}>
+        <EventToast onClose={() => setScreen("leaderboard")}>
           <Verdict od={activeOd} />
-        </EventModal>
+        </EventToast>
       )}
 
       {selectedMember && (
@@ -220,20 +221,16 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
   );
 }
 
-function EventModal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+function EventToast({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
-    >
+    <div className="pointer-events-none fixed inset-x-0 top-3 z-40 flex justify-center px-3 sm:top-6">
       <div
-        className="relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6"
-        onClick={(e) => e.stopPropagation()}
+        className="pointer-events-auto relative w-full max-w-sm animate-[toast-in_0.3s_ease-out] rounded-lg border border-zinc-200 bg-white p-4 shadow-lg"
       >
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full text-lg text-zinc-500 hover:bg-zinc-100"
+          className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full text-base text-zinc-500 hover:bg-zinc-100"
         >
           ×
         </button>
@@ -263,7 +260,7 @@ function PendingCase({ od }: { od: OdWithAsset }) {
       <p className="text-sm text-zinc-700">{od.description}</p>
       {od.asset?.file && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={od.asset.file} alt="" className="max-h-48 rounded-md" />
+        <img src={od.asset.file} alt="" className="max-h-32 max-w-full rounded-md" />
       )}
       {od.asset?.dialogue && (
         <p className="text-sm italic text-zinc-500">&ldquo;{od.asset.dialogue}&rdquo;</p>
@@ -287,7 +284,7 @@ function Verdict({ od }: { od: OdWithAsset }) {
       <p className="text-sm text-zinc-600">{od.description}</p>
       {od.asset?.file && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={od.asset.file} alt="" className="max-h-48 rounded-md" />
+        <img src={od.asset.file} alt="" className="max-h-32 max-w-full rounded-md" />
       )}
       {od.asset?.dialogue && (
         <p className="text-sm italic text-zinc-500">&ldquo;{od.asset.dialogue}&rdquo;</p>
