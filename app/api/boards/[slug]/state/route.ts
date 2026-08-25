@@ -25,7 +25,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 
   await closeExpiredOds(board.id);
 
-  const [leaderboard, latestRaised, latestClosed, pendingCount] = await Promise.all([
+  const [leaderboard, latestRaised, latestClosed, pendingOds] = await Promise.all([
     getLeaderboard(board.id),
     prisma.oD.findFirst({
       where: { boardId: board.id },
@@ -37,8 +37,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
       orderBy: { closesAt: "desc" },
       include: odInclude,
     }),
-    prisma.oD.count({ where: { boardId: board.id, status: "PENDING" } }),
+    // Just enough to drive the display's live crying/laughing photo — the
+    // full pending-OD objects aren't needed here, so keep this cheap rather
+    // than making the display page fetch them in a second request.
+    prisma.oD.findMany({
+      where: { boardId: board.id, status: "PENDING" },
+      select: { accusedId: true, raisedById: true },
+    }),
   ]);
+  const pendingCount = pendingOds.length;
 
   const latestRaisedAsset = latestRaised
     ? pickAsset(latestRaised.category.assets, null)
@@ -73,6 +80,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     board,
     leaderboard,
     pendingCount,
+    pendingOds,
     latestRaised: serializeForDisplay(latestRaised, latestRaisedAsset),
     latestClosed: serializeForDisplay(latestClosed, latestClosedAsset),
     now: Date.now(),

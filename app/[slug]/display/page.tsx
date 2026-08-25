@@ -11,6 +11,7 @@ type StateResponse = {
   board: { name: string };
   leaderboard: LeaderboardEntry[];
   pendingCount: number;
+  pendingOds: { accusedId: string; raisedById: string }[];
   latestRaised: OdWithAsset | null;
   latestClosed: OdWithAsset | null;
 };
@@ -25,7 +26,7 @@ const POLL_TIMEOUT_MS = 8000;
 export default function DisplayPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [pendingOds, setPendingOds] = useState<OD[]>([]);
+  const [pendingOds, setPendingOds] = useState<{ accusedId: string; raisedById: string }[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [screen, setScreen] = useState<Screen>("leaderboard");
   const [activeOd, setActiveOd] = useState<OdWithAsset | null>(null);
@@ -68,15 +69,14 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
       const controller = new AbortController();
       const abortTimer = setTimeout(() => controller.abort(), POLL_TIMEOUT_MS);
       try {
-        const [data, pending] = await Promise.all([
-          apiFetch<StateResponse>(`/api/boards/${slug}/state`, { signal: controller.signal }),
-          apiFetch<OD[]>(`/api/boards/${slug}/ods?status=PENDING`, { signal: controller.signal }),
-        ]);
+        const data = await apiFetch<StateResponse>(`/api/boards/${slug}/state`, {
+          signal: controller.signal,
+        });
         if (stopped) return;
         setStale(false);
         setLoading(false);
         setPendingCount(data.pendingCount);
-        setPendingOds(pending);
+        setPendingOds(data.pendingOds);
 
         const firstLoad = seenRaisedId.current === undefined;
         if (firstLoad) {
