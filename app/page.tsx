@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { unlockAdmin } from "@/lib/adminAuth";
 import type { Board } from "@/lib/types";
 
 export default function Home() {
@@ -31,6 +32,7 @@ export default function Home() {
         body: JSON.stringify({ name, createdBy, memberNames }),
       });
       setCreatedBoard(board);
+      unlockAdmin(board.slug);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -47,7 +49,7 @@ export default function Home() {
         method: "POST",
         body: JSON.stringify({ code: joinCode }),
       });
-      router.push(`/b/${slug}`);
+      router.push(`/${slug}`);
     } catch (err) {
       setJoinError(err instanceof Error ? err.message : "Couldn't join that board");
     } finally {
@@ -60,13 +62,26 @@ export default function Home() {
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 px-6 py-16">
         <h1 className="text-2xl font-bold">Board created 🎉</h1>
         <p className="text-zinc-500">
-          Share this join code with your group so they can join <strong>{createdBoard.name}</strong>.
+          <strong>{createdBoard.name}</strong>&rsquo;s leaderboard is public at:
+        </p>
+        <div className="rounded-md border border-zinc-300 px-4 py-4 text-center font-mono text-lg">
+          {typeof window !== "undefined" ? window.location.origin : ""}/{createdBoard.slug}
+        </div>
+        <p className="text-zinc-500">
+          Share this join code with your group so they can raise and vote on ODs.
         </p>
         <div className="rounded-md border border-zinc-300 px-4 py-6 text-center font-mono text-3xl font-bold tracking-widest">
           {createdBoard.joinCode}
         </div>
+        <p className="text-zinc-500">
+          Keep this admin code to yourself — it&rsquo;s the only way into board settings,
+          separate from the join code above.
+        </p>
+        <div className="rounded-md border-2 border-black px-4 py-6 text-center font-mono text-3xl font-bold tracking-widest">
+          {createdBoard.adminCode}
+        </div>
         <button
-          onClick={() => router.push(`/b/${createdBoard.slug}`)}
+          onClick={() => router.push(`/${createdBoard.slug}`)}
           className="rounded-md bg-black px-4 py-3 font-semibold text-white"
         >
           Enter board

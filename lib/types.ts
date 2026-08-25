@@ -3,6 +3,8 @@ export type Member = {
   boardId: string;
   name: string;
   image: string | null;
+  imageHappy: string | null;
+  imageSad: string | null;
 };
 
 export type Category = {
@@ -17,6 +19,9 @@ export type Board = {
   name: string;
   slug: string;
   joinCode: string | null;
+  // Only present in the create-board response, or right after regenerating
+  // it from admin settings — never on a general board read.
+  adminCode?: string;
   createdBy: string;
   votingDurationHours: number;
   dailyOdLimit: number;

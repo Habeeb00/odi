@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { closeExpiredOds, getLeaderboard } from "@/lib/od";
 import { parseScoringRule, severityForOutcome } from "@/lib/scoring";
+import { assetFileUrl, memberImageUrl } from "@/lib/media";
 
 const odInclude = {
   raisedBy: true,
@@ -10,7 +11,7 @@ const odInclude = {
   votes: true,
 } as const;
 
-function pickAsset(assets: { severity: string | null }[], severity: string | null) {
+function pickAsset<T extends { severity: string | null }>(assets: T[], severity: string | null): T | null {
   if (assets.length === 0) return null;
   const matching = severity ? assets.filter((a) => a.severity === severity) : [];
   const pool = matching.length > 0 ? matching : assets;
@@ -24,7 +25,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 
   await closeExpiredOds(board.id);
 
-  const [leaderboard, latestRaised, latestClosed, pendingCount] = await Promise.all([
+  const [leaderboard, latestRaised, latestClosed, pendingOds] = await Promise.all([
     getLeaderboard(board.id),
     prisma.oD.findFirst({
       where: { boardId: board.id },
@@ -36,8 +37,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
       orderBy: { closesAt: "desc" },
       include: odInclude,
     }),
-    prisma.oD.count({ where: { boardId: board.id, status: "PENDING" } }),
+    // Just enough to drive the display's live crying/laughing photo — the
+    // full pending-OD objects aren't needed here, so keep this cheap rather
+    // than making the display page fetch them in a second request.
+    prisma.oD.findMany({
+      where: { boardId: board.id, status: "PENDING" },
+      select: { accusedId: true, raisedById: true },
+    }),
   ]);
+  const pendingCount = pendingOds.length;
 
   const latestRaisedAsset = latestRaised
     ? pickAsset(latestRaised.category.assets, null)
@@ -50,12 +58,31 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
       )
     : null;
 
+  // category.assets carries every asset's full data: URL for the category — it's
+  // only needed server-side to pick one above, so drop it before serializing to
+  // keep this (frequently polled) payload small.
+  function serializeForDisplay(
+    od: typeof latestRaised,
+    asset: typeof latestRaisedAsset
+  ) {
+    if (!od) return null;
+    const { assets: _assets, ...category } = od.category;
+    return {
+      ...od,
+      raisedBy: memberImageUrl(od.raisedBy),
+      accused: memberImageUrl(od.accused),
+      category,
+      asset: asset ? assetFileUrl(asset) : null,
+    };
+  }
+
   return NextResponse.json({
     board,
     leaderboard,
     pendingCount,
-    latestRaised: latestRaised ? { ...latestRaised, asset: latestRaisedAsset } : null,
-    latestClosed: latestClosed ? { ...latestClosed, asset: latestClosedAsset } : null,
+    pendingOds,
+    latestRaised: serializeForDisplay(latestRaised, latestRaisedAsset),
+    latestClosed: serializeForDisplay(latestClosed, latestClosedAsset),
     now: Date.now(),
   });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SCORING_RULE } from "@/lib/scoring";
+import { isAdminForBoard } from "@/lib/session";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -11,6 +12,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
     const board = await prisma.board.findUnique({ where: { slug } });
     if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
+    if (!isAdminForBoard(req, board.id)) {
+      return NextResponse.json({ error: "Admin code required" }, { status: 401 });
+    }
 
     const scoringRule =
       body.scoringRule && typeof body.scoringRule === "object"

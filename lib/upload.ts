@@ -15,3 +15,23 @@ export function validateImageDataUrl(dataUrl: string): string {
   }
   return dataUrl;
 }
+
+const MEMBER_IMAGE_FIELDS = [
+  ["imageDataUrl", "image"],
+  ["imageHappyDataUrl", "imageHappy"],
+  ["imageSadDataUrl", "imageSad"],
+] as const;
+
+// A member can carry three sticker photos — normal, happy, sad — shown on
+// the display's race bar depending on standing. Pulls whichever of the three
+// data: URLs are present in a request body and validates each.
+export function parseMemberImageFields(body: Record<string, unknown>): Record<string, string> {
+  const data: Record<string, string> = {};
+  for (const [key, field] of MEMBER_IMAGE_FIELDS) {
+    const value = body[key];
+    if (typeof value === "string" && value) {
+      data[field] = validateImageDataUrl(value);
+    }
+  }
+  return data;
+}

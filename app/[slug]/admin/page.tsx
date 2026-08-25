@@ -1,8 +1,10 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import { useBoard } from "@/lib/useBoard";
 import { apiFetch, fileToDataUrl } from "@/lib/api";
+import { cropToFace } from "@/lib/faceCrop";
 import type { Asset, Board, Category, Member, OD } from "@/lib/types";
 
 export default function AdminPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -25,8 +27,13 @@ export default function AdminPage({ params }: { params: Promise<{ slug: string }
   if (!board) return null;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
-      <h1 className="text-2xl font-bold">Board admin</h1>
+    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Board admin</h1>
+        <Link href={`/${slug}/admin/test`} className="text-sm underline">
+          Test mode →
+        </Link>
+      </div>
 
       <Section title="Members">
         <MemberList slug={slug} members={board.members} onChange={refetch} />
@@ -76,22 +83,58 @@ function MemberList({
 }) {
   const [name, setName] = useState("");
   const [image, setImage] = useState<File | null>(null);
+  const [imageHappy, setImageHappy] = useState<File | null>(null);
+  const [imageSad, setImageSad] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageHappyPreview, setImageHappyPreview] = useState<string | null>(null);
+  const [imageSadPreview, setImageSadPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
+
+  function pickFile(
+    setFile: (f: File | null) => void,
+    preview: string | null,
+    setPreview: (p: string | null) => void
+  ) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0] ?? null;
+      if (preview) URL.revokeObjectURL(preview);
+      setFile(file);
+      setPreview(file ? URL.createObjectURL(file) : null);
+    };
+  }
+
+  async function facePhoto(file: File): Promise<string> {
+    try {
+      return await cropToFace(file);
+    } catch {
+      return fileToDataUrl(file);
+    }
+  }
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      const imageDataUrl = image ? await fileToDataUrl(image) : undefined;
+      const [imageDataUrl, imageHappyDataUrl, imageSadDataUrl] = await Promise.all([
+        image ? facePhoto(image) : undefined,
+        imageHappy ? facePhoto(imageHappy) : undefined,
+        imageSad ? facePhoto(imageSad) : undefined,
+      ]);
       await apiFetch(`/api/boards/${slug}/members`, {
         method: "POST",
-        body: JSON.stringify({ name, imageDataUrl }),
+        body: JSON.stringify({ name, imageDataUrl, imageHappyDataUrl, imageSadDataUrl }),
       });
       setName("");
       setImage(null);
+      setImageHappy(null);
+      setImageSad(null);
+      [imagePreview, imageHappyPreview, imageSadPreview].forEach((p) => p && URL.revokeObjectURL(p));
+      setImagePreview(null);
+      setImageHappyPreview(null);
+      setImageSadPreview(null);
       onChange();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add member");
@@ -109,14 +152,14 @@ function MemberList({
     }
   }
 
-  async function setPhoto(id: string, file: File) {
+  async function setPhoto(id: string, field: "imageDataUrl" | "imageHappyDataUrl" | "imageSadDataUrl", file: File) {
     setPhotoBusyId(id);
     setError(null);
     try {
-      const imageDataUrl = await fileToDataUrl(file);
+      const dataUrl = await facePhoto(file);
       await apiFetch(`/api/boards/${slug}/members/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ imageDataUrl }),
+        body: JSON.stringify({ [field]: dataUrl }),
       });
       onChange();
     } catch (err) {
@@ -126,36 +169,67 @@ function MemberList({
     }
   }
 
+  const PHOTO_SLOTS = [
+    { field: "imageDataUrl" as const, label: "Normal", pick: (m: Member) => m.image },
+    { field: "imageHappyDataUrl" as const, label: "Laughing", pick: (m: Member) => m.imageHappy },
+    { field: "imageSadDataUrl" as const, label: "Crying", pick: (m: Member) => m.imageSad },
+  ];
+
   return (
     <div className="flex flex-col gap-3">
+      <p className="text-sm text-zinc-500">
+        Each member can have three sticker photos — normal, laughing, and crying — shown on
+        the display depending on whether they&rsquo;re winning or losing the race.
+      </p>
       {members.map((m) => (
-        <div key={m.id} className="flex items-center justify-between rounded-md border border-zinc-200 px-4 py-2">
+        <div
+          key={m.id}
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 px-4 py-2"
+        >
           <div className="flex items-center gap-3">
             {m.image ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.image} alt="" className="h-8 w-8 rounded-full object-cover" />
+              <img src={m.image} alt="" className="h-8 w-8 object-contain" />
             ) : (
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs">
+              <span className="flex h-8 w-8 items-center justify-center bg-zinc-200 text-xs">
                 {m.name[0]?.toUpperCase()}
               </span>
             )}
             <span>{m.name}</span>
           </div>
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-zinc-500 underline cursor-pointer">
-              {photoBusyId === m.id ? "Uploading..." : "Change photo"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={photoBusyId === m.id}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) setPhoto(m.id, file);
-                  e.target.value = "";
-                }}
-              />
-            </label>
+          <div className="flex flex-wrap items-center gap-4">
+            {PHOTO_SLOTS.map((slot) => {
+              const current = slot.pick(m);
+              return (
+                <label
+                  key={slot.field}
+                  className="flex flex-col items-center gap-1 text-xs text-zinc-500 cursor-pointer"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-50">
+                    {photoBusyId === m.id ? (
+                      <span className="text-[10px] text-zinc-400">…</span>
+                    ) : current ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={current} alt={slot.label} className="h-full w-full object-contain" />
+                    ) : (
+                      <span className="text-lg text-zinc-300">+</span>
+                    )}
+                  </span>
+                  {slot.label}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={photoBusyId === m.id}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setPhoto(m.id, slot.field, file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              );
+            })}
             <button onClick={() => remove(m.id)} className="text-sm text-red-600">
               Remove
             </button>
@@ -163,20 +237,61 @@ function MemberList({
         </div>
       ))}
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <form onSubmit={add} className="flex flex-wrap items-center gap-2">
+      <form onSubmit={add} className="flex flex-col gap-3 rounded-md border border-zinc-200 p-3">
         <input
-          className="flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2"
+          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
           placeholder="Member name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
-        <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] ?? null)} />
-        <button disabled={busy} className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium">
+        <div className="flex flex-wrap gap-4">
+          <PhotoPickField
+            label="Normal photo"
+            preview={imagePreview}
+            onPick={pickFile(setImage, imagePreview, setImagePreview)}
+          />
+          <PhotoPickField
+            label="Laughing photo (optional)"
+            preview={imageHappyPreview}
+            onPick={pickFile(setImageHappy, imageHappyPreview, setImageHappyPreview)}
+          />
+          <PhotoPickField
+            label="Crying photo (optional)"
+            preview={imageSadPreview}
+            onPick={pickFile(setImageSad, imageSadPreview, setImageSadPreview)}
+          />
+        </div>
+        <button disabled={busy} className="self-start rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium">
           Add
         </button>
       </form>
     </div>
+  );
+}
+
+function PhotoPickField({
+  label,
+  preview,
+  onPick,
+}: {
+  label: string;
+  preview: string | null;
+  onPick: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <label className="flex flex-col items-center gap-1 text-xs text-zinc-500 cursor-pointer">
+      <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-50">
+        {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt={label} className="h-full w-full object-contain" />
+        ) : (
+          <span className="text-lg text-zinc-300">+</span>
+        )}
+      </span>
+      {label}
+      <input type="file" accept="image/*" className="hidden" onChange={onPick} />
+    </label>
   );
 }
 
@@ -395,6 +510,8 @@ function SettingsForm({
   const [dailyOdLimit, setDailyOdLimit] = useState(board.dailyOdLimit);
   const [saved, setSaved] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [regeneratingAdmin, setRegeneratingAdmin] = useState(false);
+  const [newAdminCode, setNewAdminCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function save(e: React.FormEvent) {
@@ -428,6 +545,23 @@ function SettingsForm({
     }
   }
 
+  async function regenerateAdminCode() {
+    setRegeneratingAdmin(true);
+    setError(null);
+    try {
+      const updated = await apiFetch<Board>(`/api/boards/${slug}`, {
+        method: "PATCH",
+        body: JSON.stringify({ regenerateAdminCode: true }),
+      });
+      setNewAdminCode(updated.adminCode ?? null);
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate admin code");
+    } finally {
+      setRegeneratingAdmin(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-4 py-3">
@@ -441,6 +575,23 @@ function SettingsForm({
           {regenerating ? "Generating..." : board.joinCode ? "Regenerate" : "Generate"}
         </button>
       </div>
+
+      <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-4 py-3">
+        <span className="text-sm">Admin code:</span>
+        <span className="font-mono font-bold tracking-widest">{newAdminCode ?? "hidden"}</span>
+        <button
+          onClick={regenerateAdminCode}
+          disabled={regeneratingAdmin}
+          className="ml-auto rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+        >
+          {regeneratingAdmin ? "Generating..." : "Regenerate"}
+        </button>
+      </div>
+      {newAdminCode && (
+        <p className="-mt-2 text-xs text-zinc-500">
+          Save this now — it won&rsquo;t be shown again after you leave this page.
+        </p>
+      )}
 
       <form onSubmit={save} className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <label className="flex flex-col gap-1">

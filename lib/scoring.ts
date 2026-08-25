@@ -24,6 +24,20 @@ export function computeFinalScore(
   return votes.reduce((sum, v) => sum + (scoringRule[v.vote as VoteChoice] ?? 0), 0);
 }
 
+// Unanimous-verdict bonus: everyone who voted agreed on the same (non-zero)
+// outcome, so the case gets an extra point on top of the summed weights.
+// Only applied when a case is finalized (closed) — not to the live running
+// total shown while it's still pending.
+export function computeBonus(
+  votes: { vote: string }[],
+  scoringRule: Record<VoteChoice, number>
+): number {
+  if (votes.length === 0) return 0;
+  const first = votes[0].vote;
+  const unanimous = votes.every((v) => v.vote === first);
+  return unanimous && (scoringRule[first as VoteChoice] ?? 0) > 0 ? 1 : 0;
+}
+
 // Buckets a closed case's outcome into a severity tier so the display/asset
 // system can surface a fitting curated asset (see PRD section 10).
 export function severityForOutcome(
