@@ -205,9 +205,12 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
         </EventToast>
       )}
       {screen === "verdict" && activeOd && (
-        <EventToast onClose={() => setScreen("leaderboard")}>
-          <Verdict od={activeOd} />
-        </EventToast>
+        <>
+          <VerdictFaces od={activeOd} />
+          <EventToast onClose={() => setScreen("leaderboard")}>
+            <Verdict od={activeOd} />
+          </EventToast>
+        </>
       )}
 
       {selectedMember && (
@@ -218,6 +221,39 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
         />
       )}
     </main>
+  );
+}
+
+// Rendered behind the verdict toast, flush to the bottom of the screen:
+// the raiser's sad photo on one side, the accused's happy photo on the
+// other — win or lose the case, raising it stung and getting away with
+// it feels good.
+function VerdictFaces({ od }: { od: OdWithAsset }) {
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex items-end justify-between px-2 sm:px-10">
+      <FaceCallout name={od.raisedBy.name} photo={od.raisedBy.imageSad ?? od.raisedBy.image} />
+      <FaceCallout name={od.accused.name} photo={od.accused.imageHappy ?? od.accused.image} />
+    </div>
+  );
+}
+
+function FaceCallout({ name, photo }: { name: string; photo: string | null }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      {photo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={photo}
+          alt={name}
+          className="h-24 w-24 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] sm:h-40 sm:w-40"
+        />
+      ) : (
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-zinc-200 text-2xl font-bold sm:h-40 sm:w-40 sm:text-4xl">
+          {name[0]?.toUpperCase()}
+        </div>
+      )}
+      <span className="text-xs font-semibold text-zinc-500 sm:text-sm">{name}</span>
+    </div>
   );
 }
 
