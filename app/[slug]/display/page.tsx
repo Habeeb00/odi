@@ -176,10 +176,9 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
       {stale && (
         <p className="absolute top-2 right-3 text-xs text-zinc-400">Reconnecting…</p>
       )}
-      {loading && (
+      {loading ? (
         <p className="text-sm text-zinc-400">Loading leaderboard…</p>
-      )}
-      {!loading && screen === "leaderboard" && (
+      ) : (
         <div className="w-full max-w-4xl px-4 sm:px-0">
           <RaceLeaderboard
             entries={leaderboard}
@@ -189,9 +188,26 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
           />
         </div>
       )}
-      {screen === "detected" && activeOd && <Detected od={activeOd} />}
-      {screen === "pending" && activeOd && <PendingCase od={activeOd} />}
-      {screen === "verdict" && activeOd && <Verdict od={activeOd} />}
+
+      {/* The leaderboard above stays visible the whole time — these are
+          overlays, not full-screen takeovers, so the race never disappears.
+          Closing (auto, on a timer) is what reveals the score bump/animation
+          underneath. */}
+      {screen === "detected" && activeOd && (
+        <EventModal onClose={() => setScreen("leaderboard")}>
+          <Detected od={activeOd} />
+        </EventModal>
+      )}
+      {screen === "pending" && activeOd && (
+        <EventModal onClose={() => setScreen("leaderboard")}>
+          <PendingCase od={activeOd} />
+        </EventModal>
+      )}
+      {screen === "verdict" && activeOd && (
+        <EventModal onClose={() => setScreen("leaderboard")}>
+          <Verdict od={activeOd} />
+        </EventModal>
+      )}
 
       {selectedMember && (
         <MemberOdsModal
@@ -204,33 +220,55 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
   );
 }
 
+function EventModal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full text-lg text-zinc-500 hover:bg-zinc-100"
+        >
+          ×
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function Detected({ od }: { od: OdWithAsset }) {
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
-      <p className="text-2xl font-semibold text-zinc-500">🚨</p>
-      <h1 className="text-4xl font-black tracking-tight sm:text-6xl">OD DETECTED</h1>
-      <p className="text-2xl font-bold sm:text-3xl">{od.accused.name}</p>
+    <div className="flex flex-col items-center gap-3 text-center">
+      <p className="text-xl">🚨</p>
+      <h1 className="text-2xl font-black tracking-tight">OD DETECTED</h1>
+      <p className="text-lg font-bold">{od.accused.name}</p>
     </div>
   );
 }
 
 function PendingCase({ od }: { od: OdWithAsset }) {
   return (
-    <div className="flex w-full max-w-2xl flex-col items-center gap-6 text-center">
-      <p className="text-sm font-semibold uppercase tracking-widest text-zinc-500">
+    <div className="flex flex-col items-center gap-4 text-center">
+      <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
         OD Under Investigation
       </p>
-      <h1 className="text-2xl font-black sm:text-4xl">{od.accused.name}</h1>
-      <p className="text-lg text-zinc-700 sm:text-xl">{od.description}</p>
+      <h1 className="text-xl font-black">{od.accused.name}</h1>
+      <p className="text-sm text-zinc-700">{od.description}</p>
       {od.asset?.file && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={od.asset.file} alt="" className="max-h-72 rounded-md" />
+        <img src={od.asset.file} alt="" className="max-h-48 rounded-md" />
       )}
       {od.asset?.dialogue && (
-        <p className="text-lg italic text-zinc-500">&ldquo;{od.asset.dialogue}&rdquo;</p>
+        <p className="text-sm italic text-zinc-500">&ldquo;{od.asset.dialogue}&rdquo;</p>
       )}
-      <p className="text-sm text-zinc-500">
+      <p className="text-xs text-zinc-500">
         {od.votes.length} vote{od.votes.length === 1 ? "" : "s"} received · raised by {od.raisedBy.name}
       </p>
     </div>
@@ -243,25 +281,25 @@ function Verdict({ od }: { od: OdWithAsset }) {
   const guilty = (od.finalScore ?? 0) > 0;
 
   return (
-    <div className="flex w-full max-w-2xl flex-col items-center gap-5 text-center">
-      <p className="text-sm font-semibold uppercase tracking-widest text-zinc-500">OD Court</p>
-      <h1 className="text-2xl font-black sm:text-4xl">{od.accused.name}</h1>
-      <p className="text-base text-zinc-600 sm:text-lg">{od.description}</p>
+    <div className="flex flex-col items-center gap-3 text-center">
+      <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">OD Court</p>
+      <h1 className="text-xl font-black">{od.accused.name}</h1>
+      <p className="text-sm text-zinc-600">{od.description}</p>
       {od.asset?.file && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={od.asset.file} alt="" className="max-h-72 rounded-md" />
+        <img src={od.asset.file} alt="" className="max-h-48 rounded-md" />
       )}
       {od.asset?.dialogue && (
-        <p className="text-lg italic text-zinc-500">&ldquo;{od.asset.dialogue}&rdquo;</p>
+        <p className="text-sm italic text-zinc-500">&ldquo;{od.asset.dialogue}&rdquo;</p>
       )}
-      <p className="text-sm text-zinc-500">
+      <p className="text-xs text-zinc-500">
         {Object.entries(counts)
           .filter(([, c]) => c > 0)
           .map(([k, c]) => `${c} ${VOTE_LABEL[k]}`)
           .join(" · ") || "No votes"}
       </p>
-      <p className="text-4xl font-black sm:text-6xl">{guilty ? "GUILTY" : "NOT AN OD"}</p>
-      <p className="text-2xl font-bold sm:text-3xl">+{od.finalScore ?? 0} OD</p>
+      <p className="text-2xl font-black">{guilty ? "GUILTY" : "NOT AN OD"}</p>
+      <p className="text-lg font-bold">+{od.finalScore ?? 0} OD</p>
     </div>
   );
 }
