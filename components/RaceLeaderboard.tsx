@@ -31,8 +31,11 @@ export default function RaceLeaderboard({
       <div className="flex flex-col gap-5 sm:gap-8">
         {entries.map((m) => {
           const pct = Math.min(100, (Math.max(m.score, 0) / range) * 100);
-          const photo = photoFor ? photoFor(m) : m.image;
           const flash = flashFor?.(m.id) ?? null;
+          // A score bump briefly overrides whatever photoFor would normally
+          // show (crying/leading/etc) with the laughing photo, and grows
+          // the avatar for the same span the "+N XP" popup is on screen.
+          const photo = flash !== null ? (m.imageHappy ?? m.image) : photoFor ? photoFor(m) : m.image;
           return (
             <button
               key={m.id}
@@ -44,7 +47,9 @@ export default function RaceLeaderboard({
                 style={{ width: `${pct}%` }}
               />
               <div
-                className="absolute top-1/2 h-[var(--avatar)] w-[var(--avatar)] -translate-y-1/2 transition-all duration-1000 ease-out"
+                className={`absolute top-1/2 h-[var(--avatar)] w-[var(--avatar)] -translate-y-1/2 transition-all duration-1000 ease-out ${
+                  flash !== null ? "z-10" : ""
+                }`}
                 style={{
                   left: `clamp(0px, calc(${pct}% - var(--avatar) / 2), calc(100% - var(--avatar)))`,
                 }}
@@ -62,7 +67,9 @@ export default function RaceLeaderboard({
                   <img
                     src={photo}
                     alt={m.name}
-                    className="h-full w-full object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.25)] transition-transform duration-300"
+                    className={`h-full w-full object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.25)] transition-transform duration-500 ${
+                      flash !== null ? "scale-150" : ""
+                    }`}
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center rounded-full bg-zinc-200 text-sm font-bold sm:text-xl">

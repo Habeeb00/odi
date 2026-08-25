@@ -53,6 +53,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
     await closeExpiredOds(board.id);
 
+    // Vote on what's already pending before piling on a new accusation —
+    // otherwise cases just accumulate unvoted while everyone keeps raising.
+    const unvoted = await prisma.oD.count({
+      where: {
+        boardId: board.id,
+        status: "PENDING",
+        accusedId: { not: raisedById },
+        votes: { none: { memberId: raisedById } },
+      },
+    });
+    if (unvoted > 0) {
+      return NextResponse.json(
+        { error: `Vote on your ${unvoted} pending case${unvoted === 1 ? "" : "s"} before raising a new OD` },
+        { status: 409 }
+      );
+    }
+
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const raisedToday = await prisma.oD.count({
       where: { boardId: board.id, raisedById, createdAt: { gte: since } },
@@ -82,6 +99,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
         description: description.trim(),
         evidence,
         closesAt: new Date(Date.now() + board.votingDurationHours * 60 * 60 * 1000),
+        // Raising an OD is already saying "this happened" — that counts as
+        // the raiser's own OD vote, so they don't cast it again separately.
+        votes: { create: { memberId: raisedById, vote: "OD" } },
       },
       include: { raisedBy: true, accused: true, category: true, votes: true },
     });

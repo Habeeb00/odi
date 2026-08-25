@@ -14,11 +14,22 @@ const POLL_TIMEOUT_MS = 8000;
 export default function RaisePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { board } = useBoard(slug);
-  const [recentOds, setRecentOds] = useState<OD[]>([]);
+  const [allOds, setAllOds] = useState<OD[]>([]);
   const [memberId, setMemberId] = useState<string | null>(null);
   const [voting, setVoting] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
+
+  const recentOds = allOds.slice(0, 12);
+  // Cases this member hasn't voted on yet (and isn't the accused in) — must
+  // clear these before raising a new one, same rule the server enforces.
+  const pendingVotesForMe = allOds.filter(
+    (od) =>
+      od.status === "PENDING" &&
+      memberId &&
+      od.accusedId !== memberId &&
+      !od.votes.some((v) => v.memberId === memberId)
+  );
 
   useEffect(() => {
     setMemberId(getIdentity(slug));
@@ -38,7 +49,7 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
         const ods = await apiFetch<OD[]>(`/api/boards/${slug}/ods`, { signal: controller.signal });
         if (stopped) return;
         setStale(false);
-        setRecentOds(ods.slice(0, 12));
+        setAllOds(ods);
       } catch {
         if (!stopped) setStale(true);
       } finally {
@@ -64,7 +75,7 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
         body: JSON.stringify({ memberId, vote: choice }),
       });
       setMessage("Vote recorded.");
-      setRecentOds(await apiFetch<OD[]>(`/api/boards/${slug}/ods`).then((r) => r.slice(0, 12)));
+      setAllOds(await apiFetch<OD[]>(`/api/boards/${slug}/ods`));
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to vote");
     } finally {
@@ -76,16 +87,47 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-6 sm:gap-10 sm:px-6 sm:py-8">
-      {board && (
-        <RaiseOdButton
-          slug={slug}
-          board={board}
-          memberId={memberId}
-          onRaised={() => {
-            setMessage("OD raised.");
-            apiFetch<OD[]>(`/api/boards/${slug}/ods`).then((r) => setRecentOds(r.slice(0, 12)));
-          }}
-        />
+      {memberId && pendingVotesForMe.length > 0 ? (
+        <div className="rounded-md border-2 border-black p-4">
+          <p className="font-semibold">
+            Vote on {pendingVotesForMe.length} pending case{pendingVotesForMe.length === 1 ? "" : "s"} before
+            raising a new OD
+          </p>
+          <div className="mt-3 flex flex-col gap-3">
+            {pendingVotesForMe.map((od) => (
+              <div key={od.id} className="rounded-md border border-zinc-200 p-3 text-sm">
+                <p className="font-semibold">
+                  {od.accused.name} — {od.category.name}
+                </p>
+                <p className="mt-1 text-zinc-600">{od.description}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {(["OD", "SMALL_OD", "REJECT"] as const).map((choice) => (
+                    <button
+                      key={choice}
+                      disabled={voting === od.id}
+                      onClick={() => vote(od.id, choice)}
+                      className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold disabled:opacity-50"
+                    >
+                      {choice === "OD" ? "OD" : choice === "SMALL_OD" ? "Small OD" : "Reject"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        board && (
+          <RaiseOdButton
+            slug={slug}
+            board={board}
+            memberId={memberId}
+            onRaised={() => {
+              setMessage("OD raised.");
+              apiFetch<OD[]>(`/api/boards/${slug}/ods`).then(setAllOds);
+            }}
+          />
+        )
       )}
 
       {board && board.members.length === 0 && (
