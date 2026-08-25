@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import RaiseOdButton from "@/components/RaiseOdButton";
+import IdentityPicker from "@/components/IdentityPicker";
 import { useBoard } from "@/lib/useBoard";
 import { apiFetch } from "@/lib/api";
 import { getIdentity } from "@/lib/identity";
@@ -16,6 +17,8 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
   const { board } = useBoard(slug);
   const [allOds, setAllOds] = useState<OD[]>([]);
   const [memberId, setMemberId] = useState<string | null>(null);
+  const [identityChecked, setIdentityChecked] = useState(false);
+  const [picking, setPicking] = useState(false);
   const [voting, setVoting] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
@@ -33,6 +36,7 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
 
   useEffect(() => {
     setMemberId(getIdentity(slug));
+    setIdentityChecked(true);
   }, [slug]);
 
   // Live feed: one request in flight at a time, with a hard timeout — see
@@ -84,6 +88,39 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
   }
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/${slug}` : "";
+
+  // Raising and voting are for board members only — anyone with the link
+  // can see the leaderboard/display, but this tab stays locked until
+  // they log in with the join code.
+  if (identityChecked && !memberId) {
+    return (
+      <main className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-16 text-center">
+        <h1 className="text-3xl font-black tracking-tight">Odicho ningale?</h1>
+        <p className="text-sm text-zinc-500">Join with the board&rsquo;s code to raise an OD.</p>
+        <button
+          onClick={() => setPicking(true)}
+          className="mt-2 rounded-md bg-black px-5 py-2.5 text-sm font-semibold text-white"
+        >
+          Join with code
+        </button>
+        <Link href={`/${slug}`} className="text-sm underline">
+          ← Back to leaderboard
+        </Link>
+        {picking && board && (
+          <IdentityPicker
+            slug={slug}
+            members={board.members}
+            onPicked={(id) => {
+              setMemberId(id);
+              setPicking(false);
+            }}
+            onClose={() => setPicking(false)}
+            canClose
+          />
+        )}
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-6 sm:gap-10 sm:px-6 sm:py-8">
@@ -144,11 +181,6 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
         <div>
           <p className="text-sm text-zinc-500">Share this board</p>
           <p className="break-all font-mono text-sm">{shareUrl}</p>
-          {board?.joinCode && (
-            <p className="mt-1 text-sm text-zinc-500">
-              Join code: <span className="font-mono font-bold tracking-widest">{board.joinCode}</span>
-            </p>
-          )}
         </div>
         <div className="flex items-center gap-3">
           <Link href={`/${slug}`} className="text-sm underline">
