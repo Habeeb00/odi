@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useBoard } from "@/lib/useBoard";
 import { apiFetch, fileToDataUrl } from "@/lib/api";
 import { cropToFace } from "@/lib/faceCrop";
+import CyclingAvatar from "@/components/CyclingAvatar";
 import type { Asset, Board, Category, Member, OD } from "@/lib/types";
 
 export default function AdminPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -167,14 +168,16 @@ function MemberList({
           className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 px-4 py-2"
         >
           <div className="flex items-center gap-3">
-            {m.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.image} alt="" className="h-8 w-8 object-contain" />
-            ) : (
-              <span className="flex h-8 w-8 items-center justify-center bg-zinc-200 text-xs">
-                {m.name[0]?.toUpperCase()}
-              </span>
-            )}
+            <CyclingAvatar
+              images={[m.image, m.imageHappy, m.imageSad]}
+              alt={m.name}
+              className="h-8 w-8 object-contain"
+              fallback={
+                <span className="flex h-8 w-8 items-center justify-center bg-zinc-200 text-xs">
+                  {m.name[0]?.toUpperCase()}
+                </span>
+              }
+            />
             <span>{m.name}</span>
           </div>
           <div className="flex flex-wrap items-center gap-3">
