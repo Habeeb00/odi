@@ -49,6 +49,11 @@ model Member {
   // Both fall back to `image` when not uploaded.
   imageHappy String?
   imageSad   String?
+  // Set the first time this member claims their name (join code + choose a
+  // password); null means the name is still unclaimed and up for grabs by
+  // anyone who knows the board's join code. Once set, logging back in as
+  // this member needs the password, not the join code.
+  passwordHash String?
   board      Board   @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
   raisedOds  OD[]   @relation("RaisedBy")

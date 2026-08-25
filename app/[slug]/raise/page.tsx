@@ -106,6 +106,12 @@ export default function RaisePage({ params }: { params: Promise<{ slug: string }
         <Link href={`/${slug}`} className="text-sm underline">
           ← Back to leaderboard
         </Link>
+        <p className="mt-8 border-t border-zinc-200 pt-6 text-sm text-zinc-500">
+          Not on this board?{" "}
+          <Link href="/" className="font-medium text-black underline">
+            Create an Odi board for your own friend circle
+          </Link>
+        </p>
         {picking && board && (
           <IdentityPicker
             slug={slug}

@@ -152,6 +152,18 @@ function MemberList({
     }
   }
 
+  async function resetPassword(id: string) {
+    try {
+      await apiFetch(`/api/boards/${slug}/members/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ resetPassword: true }),
+      });
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reset password");
+    }
+  }
+
   async function setPhoto(id: string, field: "imageDataUrl" | "imageHappyDataUrl" | "imageSadDataUrl", file: File) {
     setPhotoBusyId(id);
     setError(null);
@@ -196,6 +208,9 @@ function MemberList({
               </span>
             )}
             <span>{m.name}</span>
+            <span className={`text-xs ${m.hasPassword ? "text-zinc-400" : "text-amber-600"}`}>
+              {m.hasPassword ? "joined" : "not joined yet"}
+            </span>
           </div>
           <div className="flex flex-wrap items-center gap-4">
             {PHOTO_SLOTS.map((slot) => {
@@ -230,6 +245,11 @@ function MemberList({
                 </label>
               );
             })}
+            {m.hasPassword && (
+              <button onClick={() => resetPassword(m.id)} className="text-sm text-zinc-500 underline">
+                Reset password
+              </button>
+            )}
             <button onClick={() => remove(m.id)} className="text-sm text-red-600">
               Remove
             </button>

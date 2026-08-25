@@ -6,10 +6,17 @@
 // responses expose a small URL and the actual bytes are served (and cached
 // by the browser) from a dedicated route.
 export function memberImageUrl<
-  T extends { id: string; image: string | null; imageHappy?: string | null; imageSad?: string | null },
->(member: T): T {
+  T extends {
+    id: string;
+    image: string | null;
+    imageHappy?: string | null;
+    imageSad?: string | null;
+    passwordHash?: string | null;
+  },
+>(member: T): Omit<T, "passwordHash"> & { hasPassword?: boolean } {
+  const { passwordHash, ...rest } = member;
   return {
-    ...member,
+    ...rest,
     image: member.image ? `/api/members/${member.id}/image` : null,
     ...("imageHappy" in member
       ? { imageHappy: member.imageHappy ? `/api/members/${member.id}/image?mood=happy` : null }
@@ -17,6 +24,10 @@ export function memberImageUrl<
     ...("imageSad" in member
       ? { imageSad: member.imageSad ? `/api/members/${member.id}/image?mood=sad` : null }
       : {}),
+    // passwordHash itself never leaves the server — only whether the name
+    // has been claimed, so the client knows to ask for a password instead
+    // of a join code.
+    ...("passwordHash" in member ? { hasPassword: !!passwordHash } : {}),
   };
 }
 

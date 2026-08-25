@@ -25,6 +25,10 @@ export async function PATCH(
     } catch (err) {
       return NextResponse.json({ error: (err as Error).message }, { status: 400 });
     }
+    // Lets someone back into a name they locked themselves out of — clears
+    // the password so the next login goes through the join-code claim flow
+    // again, same as an unclaimed name.
+    if (body.resetPassword) data.passwordHash = null;
 
     const member = await prisma.member.update({ where: { id: memberId }, data });
     return NextResponse.json(memberImageUrl(member));

@@ -5,6 +5,9 @@ export type Member = {
   image: string | null;
   imageHappy: string | null;
   imageSad: string | null;
+  // Whether this name has been claimed with a password yet — never the
+  // hash itself, which stays server-side.
+  hasPassword: boolean;
 };
 
 export type Category = {
