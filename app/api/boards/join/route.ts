@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeJoinCode } from "@/lib/joinCode";
+import { clientMessage } from "@/lib/apiError";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("POST /api/boards/join failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to join board" },
+      { error: clientMessage(err, "Failed to join board") },
       { status: 500 }
     );
   }

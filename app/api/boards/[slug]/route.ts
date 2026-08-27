@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { generateJoinCode } from "@/lib/joinCode";
 import { memberImageUrl } from "@/lib/media";
 import { isAdminForBoard } from "@/lib/session";
+import { clientMessage } from "@/lib/apiError";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -19,7 +20,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
   } catch (err) {
     console.error("GET /api/boards/[slug] failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to load board" },
+      { error: clientMessage(err, "Failed to load board") },
       { status: 500 }
     );
   }
@@ -67,7 +68,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sl
   } catch (err) {
     console.error("PATCH /api/boards/[slug] failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to update board" },
+      { error: clientMessage(err, "Failed to update board") },
       { status: 500 }
     );
   }

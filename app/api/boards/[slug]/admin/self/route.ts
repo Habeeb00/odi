@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAdminForBoard, withMember } from "@/lib/session";
+import { clientMessage } from "@/lib/apiError";
 
 // Lets a browser that's already proven admin access (cookie set by
 // /admin/verify or board creation) silently resolve "who am I" as the
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   } catch (err) {
     console.error("POST /api/boards/[slug]/admin/self failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to resolve admin identity" },
+      { error: clientMessage(err, "Failed to resolve admin identity") },
       { status: 500 }
     );
   }

@@ -70,7 +70,7 @@ export default function RaiseOdButton({
 
   function press() {
     if (!memberId) {
-      setError("Pick who you are first (top right).");
+      setError("Sign in first — the button in the top right.");
       return;
     }
     if (!accusedId) {
@@ -86,13 +86,18 @@ export default function RaiseOdButton({
   }
 
   return (
-    <div className="flex w-full flex-col items-center gap-6 rounded-3xl bg-zinc-50 px-4 py-8 sm:px-8">
+    <div className="flex w-full flex-col items-center gap-5 rounded-3xl border border-line bg-surface px-4 py-8 sm:px-8">
       <div className="flex flex-col items-center gap-1 text-center">
-        <p className="text-lg font-bold">Who did it?</p>
-        <p className="text-xs text-zinc-500">Scroll or tap a face to pick them</p>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-faint">
+          Step one
+        </span>
+        <p className="display text-2xl leading-none">Who did it?</p>
       </div>
 
       <div className="relative w-full max-w-md">
+        {/* Fades the faces off both edges so the strip reads as scrollable. */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-surface to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-surface to-transparent" />
         <div
           ref={trackRef}
           onScroll={onScroll}
@@ -112,12 +117,13 @@ export default function RaiseOdButton({
                 setAccusedId(m.id);
                 scrollToMember(m.id);
               }}
+              title={m.name}
               className="flex shrink-0 snap-center flex-col items-center gap-2"
               style={{ width: ITEM_WIDTH }}
             >
               <span
                 className={`flex h-20 w-20 items-center justify-center transition ${
-                  accusedId === m.id ? "scale-110" : "opacity-50"
+                  accusedId === m.id ? "scale-110" : "opacity-40"
                 }`}
               >
                 {m.image ? (
@@ -126,18 +132,18 @@ export default function RaiseOdButton({
                     src={m.image}
                     alt={m.name}
                     className={`h-20 w-20 object-contain transition ${
-                      accusedId === m.id ? "drop-shadow-[0_6px_10px_rgba(220,38,38,0.35)]" : ""
+                      accusedId === m.id ? "drop-shadow-[0_6px_10px_rgba(216,31,42,0.35)]" : ""
                     }`}
                   />
                 ) : (
-                  <span className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black text-zinc-700">
+                  <span className="flex h-16 w-16 items-center justify-center rounded-full bg-paper text-2xl font-black">
                     {m.name[0]?.toUpperCase()}
                   </span>
                 )}
               </span>
               <span
                 className={`max-w-[90px] truncate text-xs ${
-                  accusedId === m.id ? "font-bold text-zinc-900" : "text-zinc-400"
+                  accusedId === m.id ? "font-bold text-ink" : "text-faint"
                 }`}
               >
                 {m.name}
@@ -145,7 +151,7 @@ export default function RaiseOdButton({
             </button>
           ))}
           {candidates.length === 0 && (
-            <p className="text-sm text-zinc-500">No one else on this board yet.</p>
+            <p className="text-sm text-muted">No one else on this board yet.</p>
           )}
         </div>
       </div>
@@ -153,8 +159,8 @@ export default function RaiseOdButton({
       <button
         type="button"
         onClick={press}
-        aria-label="Raise an OD"
-        className="group mt-2 flex flex-col items-center gap-4"
+        aria-label={accused ? `Raise an OD on ${accused.name}` : "Raise an OD"}
+        className="group flex flex-col items-center gap-3"
       >
         <span className="relative block h-[220px] w-[223px] sm:h-[320px] sm:w-[323px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -184,22 +190,22 @@ export default function RaiseOdButton({
                 <img
                   src={accused.image}
                   alt={accused.name}
-                  className="h-28 w-28 object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.35)] sm:h-44 sm:w-44"
+                  className="h-28 w-28 object-contain drop-shadow-[0_10px_16px_rgba(20,17,15,0.35)] sm:h-44 sm:w-44"
                 />
               ) : (
-                <span className="text-4xl font-black text-white drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)] sm:text-6xl">
+                <span className="text-4xl font-black text-paper drop-shadow-[0_4px_6px_rgba(20,17,15,0.4)] sm:text-6xl">
                   {accused.name[0]?.toUpperCase()}
                 </span>
               )}
             </span>
           )}
         </span>
-        <span className="text-base font-bold text-zinc-800 sm:text-lg">
+        <span className="display text-xl leading-none transition group-hover:text-od sm:text-2xl">
           Raise an OD{accused ? ` on ${accused.name}` : ""}
         </span>
       </button>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-od">{error}</p>}
 
       {open && accused && (
         <RaiseOdModal
@@ -236,8 +242,15 @@ function RaiseOdModal({
   const [categoryId, setCategoryId] = useState(board.categories[0]?.id ?? "");
   const [description, setDescription] = useState("");
   const [evidence, setEvidence] = useState<File | null>(null);
+  const [evidencePreview, setEvidencePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  function pickEvidence(file: File | null) {
+    if (evidencePreview) URL.revokeObjectURL(evidencePreview);
+    setEvidence(file);
+    setEvidencePreview(file ? URL.createObjectURL(file) : null);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -265,69 +278,113 @@ function RaiseOdModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-lg bg-white p-6"
+        className="flex max-h-[90vh] w-full max-w-md animate-[rise-in_0.25s_ease-out] flex-col overflow-hidden rounded-2xl bg-surface text-left"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">OD on {accused.name}</h2>
-          <button onClick={onClose} className="text-sm text-zinc-500">
-            Close
+        <div className="flex items-center gap-3 border-b border-line p-5">
+          {accused.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={accused.image} alt="" className="h-11 w-11 shrink-0 object-contain" />
+          ) : (
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-paper font-bold">
+              {accused.name[0]?.toUpperCase()}
+            </span>
+          )}
+          <div className="min-w-0">
+            <h2 className="display truncate text-xl leading-none">OD on {accused.name}</h2>
+            <p className="mt-1 text-xs text-muted">The group decides if it counts.</p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-lg text-faint hover:bg-paper hover:text-ink"
+          >
+            ×
           </button>
         </div>
-        <p className="mt-1 text-sm text-zinc-500">
-          Something happened. Let the group decide if it deserves one.
-        </p>
 
-        <form onSubmit={submit} className="mt-5 flex flex-col gap-4">
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Category</span>
-            <select
-              required
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
-            >
+        <form onSubmit={submit} className="flex flex-1 flex-col gap-5 overflow-y-auto p-5">
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+              Category
+            </legend>
+            <div className="flex flex-wrap gap-2">
               {board.categories.map((c) => (
-                <option key={c.id} value={c.id}>
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setCategoryId(c.id)}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                    categoryId === c.id
+                      ? "border-ink bg-ink text-paper"
+                      : "border-line hover:border-ink"
+                  }`}
+                >
                   {c.name}
-                </option>
+                </button>
               ))}
-            </select>
-          </label>
+            </div>
+          </fieldset>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">What happened?</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+              What happened?
+            </span>
             <textarea
               required
+              autoFocus
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
+              className="resize-none rounded-xl border border-line bg-transparent px-3.5 py-3 text-sm leading-relaxed outline-none transition placeholder:text-faint focus:border-ink"
               placeholder="Went for a movie without inviting us."
             />
           </label>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Evidence (optional)</span>
+          <label className="flex cursor-pointer flex-col gap-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+              Evidence <span className="font-normal normal-case tracking-normal">(optional)</span>
+            </span>
+            {evidencePreview ? (
+              <span className="relative block overflow-hidden rounded-xl border border-line">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={evidencePreview} alt="" className="max-h-40 w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    pickEvidence(null);
+                  }}
+                  className="absolute right-2 top-2 rounded-full bg-ink/70 px-2 py-0.5 text-xs font-semibold text-paper"
+                >
+                  Remove
+                </button>
+              </span>
+            ) : (
+              <span className="rounded-xl border border-dashed border-line px-3.5 py-5 text-center text-sm text-faint transition hover:border-ink hover:text-muted">
+                Add a screenshot
+              </span>
+            )}
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => setEvidence(e.target.files?.[0] ?? null)}
+              className="hidden"
+              onChange={(e) => pickEvidence(e.target.files?.[0] ?? null)}
             />
           </label>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-od">{error}</p>}
 
           <button
             type="submit"
             disabled={submitting}
-            className="mt-2 rounded-md bg-black px-4 py-3 font-semibold text-white disabled:opacity-50"
+            className="rounded-xl bg-od px-4 py-3.5 font-semibold text-paper transition hover:brightness-95 disabled:opacity-50"
           >
-            {submitting ? "Submitting..." : "Submit OD"}
+            {submitting ? "Filing…" : "File the OD"}
           </button>
         </form>
       </div>

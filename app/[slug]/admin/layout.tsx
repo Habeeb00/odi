@@ -61,27 +61,30 @@ function AdminGate({ slug, onUnlocked }: { slug: string; onUnlocked: () => void 
   }
 
   return (
-    <main className="mx-auto flex min-h-[60vh] w-full max-w-sm flex-col justify-center gap-4 px-6">
-      <h1 className="text-xl font-bold">Admin access</h1>
-      <p className="text-sm text-zinc-500">
-        Enter this board&rsquo;s admin code — given to whoever created it, separate from the
-        join code members use.
+    <main className="mx-auto flex min-h-[60vh] w-full max-w-sm flex-col justify-center gap-3 px-6 py-16">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-od">
+        Locked
+      </span>
+      <h1 className="display text-3xl leading-none">Admin access</h1>
+      <p className="text-sm leading-relaxed text-muted">
+        Enter this board&rsquo;s admin code. It went to whoever created the board and is
+        separate from the join code members use.
       </p>
-      <form onSubmit={submit} className="flex flex-col gap-3">
+      <form onSubmit={submit} className="mt-2 flex flex-col gap-3">
         <input
           autoFocus
-          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-center font-mono text-lg uppercase tracking-widest outline-none focus:border-black"
+          className="rounded-xl border border-line bg-surface px-3 py-3 text-center font-mono text-lg uppercase tracking-[0.18em] outline-none transition placeholder:text-faint focus:border-ink"
           placeholder="ADMIN CODE"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           required
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-od">{error}</p>}
         <button
           disabled={busy}
-          className="rounded-md bg-black px-4 py-3 font-semibold text-white disabled:opacity-50"
+          className="rounded-xl bg-ink px-4 py-3.5 font-semibold text-paper transition hover:bg-od disabled:opacity-50"
         >
-          {busy ? "Checking..." : "Unlock"}
+          {busy ? "Checking…" : "Unlock"}
         </button>
       </form>
     </main>

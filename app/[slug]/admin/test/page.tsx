@@ -72,11 +72,11 @@ export default function TestModePage({ params }: { params: Promise<{ slug: strin
           ← Back to admin
         </Link>
       </div>
-      <p className="mt-1 text-sm text-zinc-500">
+      <p className="mt-1 text-sm text-muted">
         Nudge scores and trigger OD sequences directly, without waiting on real votes —
         for designing interactions and animations. Nothing here is visible to members.
       </p>
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-3 text-sm text-od">{error}</p>}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
@@ -85,11 +85,11 @@ export default function TestModePage({ params }: { params: Promise<{ slug: strin
               {leaderboard.map((m) => (
                 <div
                   key={m.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-200 px-3 py-2"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line px-3 py-2"
                 >
                   <span className="font-medium">{m.name}</span>
                   <div className="flex items-center gap-2">
-                    <span className="w-10 text-right font-mono text-sm text-zinc-500">
+                    <span className="w-10 text-right font-mono text-sm text-muted">
                       {m.score}
                     </span>
                     {SCORE_STEPS.map((delta) => (
@@ -97,7 +97,7 @@ export default function TestModePage({ params }: { params: Promise<{ slug: strin
                         key={delta}
                         disabled={busy === `score-${m.id}-${delta}`}
                         onClick={() => adjustScore(m.id, delta)}
-                        className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-semibold disabled:opacity-50"
+                        className="rounded-lg border border-line px-2 py-1 text-xs font-semibold disabled:opacity-50"
                       >
                         {delta > 0 ? `+${delta}` : delta}
                       </button>
@@ -106,7 +106,7 @@ export default function TestModePage({ params }: { params: Promise<{ slug: strin
                 </div>
               ))}
               {leaderboard.length === 0 && (
-                <p className="text-sm text-zinc-500">No members yet.</p>
+                <p className="text-sm text-muted">No members yet.</p>
               )}
             </div>
           </Section>
@@ -123,30 +123,30 @@ export default function TestModePage({ params }: { params: Promise<{ slug: strin
           <Section title="Pending → resolve">
             <div className="flex flex-col gap-3">
               {pendingOds.map((od) => (
-                <div key={od.id} className="rounded-md border border-zinc-200 p-3">
+                <div key={od.id} className="rounded-lg border border-line p-3">
                   <p className="text-sm">
                     <strong>{od.accused.name}</strong> — {od.category.name}
                   </p>
-                  <p className="text-xs text-zinc-500">{od.description}</p>
+                  <p className="text-xs text-muted">{od.description}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       disabled={busy === `resolve-${od.id}`}
                       onClick={() => resolve(od.id, 10)}
-                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                      className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
                     >
                       Guilty (+10)
                     </button>
                     <button
                       disabled={busy === `resolve-${od.id}`}
                       onClick={() => resolve(od.id, 5)}
-                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                      className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
                     >
                       Small OD (+5)
                     </button>
                     <button
                       disabled={busy === `resolve-${od.id}`}
                       onClick={() => resolve(od.id, 0)}
-                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                      className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
                     >
                       Not an OD (0)
                     </button>
@@ -154,13 +154,13 @@ export default function TestModePage({ params }: { params: Promise<{ slug: strin
                 </div>
               ))}
               {pendingOds.length === 0 && (
-                <p className="text-sm text-zinc-500">No pending ODs — raise one above.</p>
+                <p className="text-sm text-muted">No pending ODs — raise one above.</p>
               )}
             </div>
           </Section>
 
           <Section title="Assets & dialogues">
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted">
               Category images, GIFs, and dialogue lines shown during the detected/pending/
               verdict screens are managed from{" "}
               <Link href={`/${slug}/admin`} className="underline">
@@ -173,12 +173,12 @@ export default function TestModePage({ params }: { params: Promise<{ slug: strin
 
         <div>
           <Section title="Live display preview">
-            <p className="mb-2 text-sm text-zinc-500">
+            <p className="mb-2 text-sm text-muted">
               Reflects real-time — trigger something on the left and watch it play out here.
             </p>
             <iframe
               src={`/${slug}/display`}
-              className="h-[700px] w-full rounded-md border border-zinc-200"
+              className="h-[700px] w-full rounded-lg border border-line"
               title="Display preview"
             />
           </Section>
@@ -191,7 +191,7 @@ export default function TestModePage({ params }: { params: Promise<{ slug: strin
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">{title}</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">{title}</h2>
       <div className="mt-3">{children}</div>
     </section>
   );
@@ -233,16 +233,16 @@ function RaiseForm({
   }
 
   if (members.length === 0) {
-    return <p className="text-sm text-zinc-500">Add members in Admin first.</p>;
+    return <p className="text-sm text-muted">Add members in Admin first.</p>;
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-2 rounded-md border border-zinc-200 p-3">
+    <form onSubmit={submit} className="flex flex-col gap-2 rounded-lg border border-line p-3">
       <div className="flex flex-wrap gap-2">
         <select
           value={raisedById}
           onChange={(e) => setRaisedById(e.target.value)}
-          className="flex-1 rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm"
+          className="flex-1 rounded-lg border border-line bg-transparent px-2 py-1.5 text-sm"
         >
           {members.map((m) => (
             <option key={m.id} value={m.id}>
@@ -253,7 +253,7 @@ function RaiseForm({
         <select
           value={accusedId}
           onChange={(e) => setAccusedId(e.target.value)}
-          className="flex-1 rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm"
+          className="flex-1 rounded-lg border border-line bg-transparent px-2 py-1.5 text-sm"
         >
           {members.map((m) => (
             <option key={m.id} value={m.id}>
@@ -265,7 +265,7 @@ function RaiseForm({
       <select
         value={categoryId}
         onChange={(e) => setCategoryId(e.target.value)}
-        className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm"
+        className="rounded-lg border border-line bg-transparent px-2 py-1.5 text-sm"
       >
         {categories.map((c) => (
           <option key={c.id} value={c.id}>
@@ -276,13 +276,13 @@ function RaiseForm({
       <input
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm"
+        className="rounded-lg border border-line bg-transparent px-2 py-1.5 text-sm"
         placeholder="Description"
       />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-od">{error}</p>}
       <button
         disabled={busy}
-        className="self-start rounded-md bg-black px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+        className="self-start rounded-lg bg-ink px-3 py-1.5 text-sm font-semibold text-paper disabled:opacity-50"
       >
         {busy ? "Raising..." : "Raise it"}
       </button>

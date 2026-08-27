@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { validateImageDataUrl } from "@/lib/upload";
 import { assetFileUrl } from "@/lib/media";
 import { isAdminForBoard } from "@/lib/session";
+import { clientMessage } from "@/lib/apiError";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   } catch (err) {
     console.error("POST /api/boards/[slug]/assets failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to add asset" },
+      { error: clientMessage(err, "Failed to add asset") },
       { status: 500 }
     );
   }

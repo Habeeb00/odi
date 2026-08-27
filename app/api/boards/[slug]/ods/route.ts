@@ -4,6 +4,7 @@ import { closeExpiredOds } from "@/lib/od";
 import { validateImageDataUrl } from "@/lib/upload";
 import { serializeOd } from "@/lib/media";
 import { getMemberIdForBoard } from "@/lib/session";
+import { clientMessage } from "@/lib/apiError";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   } catch (err) {
     console.error("POST /api/boards/[slug]/ods failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to raise OD" },
+      { error: clientMessage(err, "Failed to raise OD") },
       { status: 500 }
     );
   }

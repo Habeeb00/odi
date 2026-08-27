@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SCORING_RULE } from "@/lib/scoring";
 import { isAdminForBoard } from "@/lib/session";
+import { clientMessage } from "@/lib/apiError";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   } catch (err) {
     console.error("POST /api/boards/[slug]/categories failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to add category" },
+      { error: clientMessage(err, "Failed to add category") },
       { status: 500 }
     );
   }

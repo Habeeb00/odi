@@ -1,8 +1,11 @@
 "use client";
 
 import { use, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import RaceLeaderboard from "@/components/RaceLeaderboard";
+import TugOfWar from "@/components/TugOfWar";
+import { HeadPile } from "@/components/HeadPile";
 import type { LeaderboardEntry, OD, Asset } from "@/lib/types";
 
 type OdWithAsset = OD & { asset: Asset | null };
@@ -26,6 +29,7 @@ const POLL_TIMEOUT_MS = 8000;
 export default function DisplayPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [boardName, setBoardName] = useState<string | null>(null);
   const [pendingOds, setPendingOds] = useState<{ accusedId: string; raisedById: string }[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [screen, setScreen] = useState<Screen>("leaderboard");
@@ -75,6 +79,7 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
         if (stopped) return;
         setStale(false);
         setLoading(false);
+        setBoardName(data.board.name);
         setPendingCount(data.pendingCount);
         setPendingOds(data.pendingOds);
 
@@ -171,22 +176,88 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
     return m.image;
   }
 
+  const settled = leaderboard.some((m) => m.score !== 0);
+  const totalOd = leaderboard.reduce((sum, m) => sum + Math.max(0, m.score), 0);
+
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center bg-white p-3 sm:p-8">
+    <main className="relative mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+      <div className="mb-8 flex items-center gap-3 sm:mb-10">
+        <div className="min-w-0">
+          <h1 className="display text-3xl leading-none sm:text-4xl">The race</h1>
+          <p className="mt-1.5 text-xs text-muted">
+            {pendingCount > 0 ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 animate-[siren_1.6s_ease-in-out_infinite] rounded-full bg-od" />
+                {pendingCount} case{pendingCount === 1 ? "" : "s"} under investigation
+              </span>
+            ) : settled ? (
+              "All quiet. No open cases."
+            ) : (
+              "Nobody has an OD yet. Somebody has to go first."
+            )}
+          </p>
+        </div>
+        <Link
+          href={`/${slug}/raise`}
+          className="ml-auto shrink-0 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper transition hover:bg-od"
+        >
+          Raise an OD
+        </Link>
+      </div>
+
       {stale && (
-        <p className="absolute top-2 right-3 text-xs text-zinc-400">Reconnecting…</p>
+        <p className="absolute right-4 top-2 text-[11px] text-faint sm:right-6">Reconnecting…</p>
       )}
+
       {loading ? (
-        <p className="text-sm text-zinc-400">Loading leaderboard…</p>
+        <div className="flex flex-col gap-9">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="animate-pulse">
+              <div className="mb-2 h-3 w-24 rounded bg-line" />
+              <div className="h-1.5 w-full rounded-full bg-line" />
+            </div>
+          ))}
+        </div>
       ) : (
-        <div className="w-full max-w-4xl px-3 sm:px-0">
+        <>
           <RaceLeaderboard
             entries={leaderboard}
             onSelectMember={setSelectedMember}
             photoFor={photoFor}
             flashFor={(id) => flashes[id] ?? null}
           />
-        </div>
+          {leaderboard.length > 0 && (
+            <p className="mt-10 text-center text-xs text-faint">
+              Tap anyone to read their record.
+            </p>
+          )}
+
+          {/* The tub sits under the race: the standings are what people came
+              for, this is the group portrait they scroll down to. Same drawing
+              as this board's card on /boards. */}
+          {leaderboard.length > 0 && (
+            <section className="mt-14 border-t border-line pt-10">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-faint">
+                The tub
+              </h2>
+              <div className="mx-auto mt-4 max-w-xl px-2">
+                <HeadPile heads={leaderboard} />
+              </div>
+              <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t-2 border-ink pt-2">
+                <p className="font-mono text-sm font-bold">{boardName ?? "This board"}</p>
+                <p className="font-mono text-xs text-muted">
+                  {leaderboard.length} in the tub · {totalOd} OD on record
+                </p>
+                <Link
+                  href="/boards"
+                  className="ml-auto font-mono text-xs text-faint underline hover:text-ink"
+                >
+                  the rack →
+                </Link>
+              </div>
+            </section>
+          )}
+        </>
       )}
 
       {/* The leaderboard above stays visible and interactive the whole
@@ -201,14 +272,14 @@ export default function DisplayPage({ params }: { params: Promise<{ slug: string
       )}
       {screen === "pending" && activeOd && (
         <EventToast onClose={() => setScreen("leaderboard")}>
-          <PendingCase od={activeOd} />
+          <PendingCase od={activeOd} members={leaderboard} />
         </EventToast>
       )}
       {screen === "verdict" && activeOd && (
         <>
           <VerdictFaces od={activeOd} />
           <EventToast onClose={() => setScreen("leaderboard")}>
-            <Verdict od={activeOd} />
+            <Verdict od={activeOd} members={leaderboard} />
           </EventToast>
         </>
       )}
@@ -245,14 +316,14 @@ function FaceCallout({ name, photo }: { name: string; photo: string | null }) {
         <img
           src={photo}
           alt={name}
-          className="h-24 w-24 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] sm:h-40 sm:w-40"
+          className="h-24 w-24 object-contain drop-shadow-[0_4px_10px_rgba(20,17,15,0.3)] sm:h-40 sm:w-40"
         />
       ) : (
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-zinc-200 text-2xl font-bold sm:h-40 sm:w-40 sm:text-4xl">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-line text-2xl font-bold sm:h-40 sm:w-40 sm:text-4xl">
           {name[0]?.toUpperCase()}
         </div>
       )}
-      <span className="text-xs font-semibold text-zinc-500 sm:text-sm">{name}</span>
+      <span className="text-xs font-semibold text-muted sm:text-sm">{name}</span>
     </div>
   );
 }
@@ -260,13 +331,11 @@ function FaceCallout({ name, photo }: { name: string; photo: string | null }) {
 function EventToast({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-3 z-40 flex justify-center px-3 sm:bottom-6">
-      <div
-        className="pointer-events-auto relative w-full max-w-sm animate-[toast-in-bottom_0.3s_ease-out] rounded-lg border border-zinc-200 bg-white p-4 shadow-lg"
-      >
+      <div className="pointer-events-auto relative w-full max-w-sm animate-[toast-in-bottom_0.3s_ease-out] rounded-2xl border border-line bg-surface p-5 shadow-[0_8px_30px_rgba(20,17,15,0.14)]">
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full text-base text-zinc-500 hover:bg-zinc-100"
+          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-base text-faint hover:bg-paper hover:text-ink"
         >
           ×
         </button>
@@ -278,61 +347,76 @@ function EventToast({ children, onClose }: { children: React.ReactNode; onClose:
 
 function Detected({ od }: { od: OdWithAsset }) {
   return (
-    <div className="flex flex-col items-center gap-3 text-center">
-      <p className="text-xl">🚨</p>
-      <h1 className="text-2xl font-black tracking-tight">OD DETECTED</h1>
-      <p className="text-lg font-bold">{od.accused.name}</p>
+    <div className="flex flex-col items-center gap-2 text-center">
+      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-od">
+        <span className="h-1.5 w-1.5 animate-[siren_1.2s_ease-in-out_infinite] rounded-full bg-od" />
+        OD detected
+      </span>
+      <p className="display text-3xl leading-none">{od.accused.name}</p>
+      <p className="text-xs text-muted">Raised by {od.raisedBy.name}</p>
     </div>
   );
 }
 
-function PendingCase({ od }: { od: OdWithAsset }) {
+function PendingCase({ od, members }: { od: OdWithAsset; members: LeaderboardEntry[] }) {
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
-      <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-        OD Under Investigation
-      </p>
-      <h1 className="text-xl font-black">{od.accused.name}</h1>
-      <p className="text-sm text-zinc-700">{od.description}</p>
+    <div className="flex flex-col items-center gap-3 text-center">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+        Under investigation
+      </span>
+      <p className="display text-2xl leading-none">{od.accused.name}</p>
+      <p className="text-sm leading-relaxed text-ink">{od.description}</p>
       {od.asset?.file && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={od.asset.file} alt="" className="max-h-32 max-w-full rounded-md" />
+        <img src={od.asset.file} alt="" className="max-h-32 max-w-full rounded-lg" />
       )}
       {od.asset?.dialogue && (
-        <p className="text-sm italic text-zinc-500">&ldquo;{od.asset.dialogue}&rdquo;</p>
+        <p className="text-sm italic text-muted">&ldquo;{od.asset.dialogue}&rdquo;</p>
       )}
-      <p className="text-xs text-zinc-500">
-        {od.votes.length} vote{od.votes.length === 1 ? "" : "s"} received · raised by {od.raisedBy.name}
-      </p>
+      {/* Where the case actually stands: who's pulling, and how hard. */}
+      <TugOfWar votes={od.votes} members={members} className="w-full" />
+      <p className="text-xs text-faint">raised by {od.raisedBy.name}</p>
     </div>
   );
 }
 
-function Verdict({ od }: { od: OdWithAsset }) {
+function Verdict({ od, members }: { od: OdWithAsset; members: LeaderboardEntry[] }) {
   const counts = { OD: 0, SMALL_OD: 0, REJECT: 0 } as Record<string, number>;
   for (const v of od.votes) counts[v.vote] = (counts[v.vote] ?? 0) + 1;
   const guilty = (od.finalScore ?? 0) > 0;
 
   return (
     <div className="flex flex-col items-center gap-3 text-center">
-      <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">OD Court</p>
-      <h1 className="text-xl font-black">{od.accused.name}</h1>
-      <p className="text-sm text-zinc-600">{od.description}</p>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+        Verdict
+      </span>
+      <p className="display text-2xl leading-none">{od.accused.name}</p>
+      <p className="text-sm leading-relaxed text-muted">{od.description}</p>
       {od.asset?.file && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={od.asset.file} alt="" className="max-h-32 max-w-full rounded-md" />
+        <img src={od.asset.file} alt="" className="max-h-32 max-w-full rounded-lg" />
       )}
       {od.asset?.dialogue && (
-        <p className="text-sm italic text-zinc-500">&ldquo;{od.asset.dialogue}&rdquo;</p>
+        <p className="text-sm italic text-muted">&ldquo;{od.asset.dialogue}&rdquo;</p>
       )}
-      <p className="text-xs text-zinc-500">
+      {/* Where the rope finished. */}
+      <TugOfWar votes={od.votes} members={members} className="w-full" />
+      <p className="text-xs text-faint">
         {Object.entries(counts)
           .filter(([, c]) => c > 0)
           .map(([k, c]) => `${c} ${VOTE_LABEL[k]}`)
           .join(" · ") || "No votes"}
       </p>
-      <p className="text-2xl font-black">{guilty ? "GUILTY" : "NOT AN OD"}</p>
-      <p className="text-lg font-bold">+{od.finalScore ?? 0} OD</p>
+      <div className="mt-1 w-full border-t border-line pt-3">
+        <p className={`display text-3xl leading-none ${guilty ? "text-od" : "text-clear"}`}>
+          {guilty ? "Guilty" : "Not an OD"}
+        </p>
+        {guilty && (
+          <p className="mt-1 font-mono text-sm font-bold tabular-nums">
+            +{od.finalScore} to {od.accused.name}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -353,43 +437,75 @@ function MemberOdsModal({
     apiFetch<OD[]>(`/api/boards/${slug}/ods?status=CLOSED&accusedId=${member.id}`).then(setOds);
   }, [slug, member.id]);
 
+  const convictions = ods?.filter((od) => (od.finalScore ?? 0) > 0).length ?? 0;
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4"
       onClick={onClose}
     >
       <div
-        className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6"
+        className="flex max-h-[85vh] w-full max-w-lg animate-[rise-in_0.25s_ease-out] flex-col overflow-hidden rounded-2xl bg-surface"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">{member.name}&rsquo;s closed ODs</h2>
-          <button onClick={onClose} className="text-sm text-zinc-500">
-            Close
+        <div className="flex items-start gap-3 border-b border-line p-5">
+          {member.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={member.image} alt="" className="h-11 w-11 shrink-0 object-contain" />
+          ) : (
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-paper font-bold">
+              {member.name[0]?.toUpperCase()}
+            </span>
+          )}
+          <div className="min-w-0">
+            <h2 className="display truncate text-xl leading-none">{member.name}</h2>
+            <p className="mt-1 text-xs text-muted">
+              {member.score} OD · {convictions} conviction{convictions === 1 ? "" : "s"}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-lg text-faint hover:bg-paper hover:text-ink"
+          >
+            ×
           </button>
         </div>
 
-        {ods === null && <p className="mt-4 text-sm text-zinc-500">Loading...</p>}
-        {ods && ods.length === 0 && (
-          <p className="mt-4 text-sm text-zinc-500">No closed ODs yet.</p>
-        )}
-        {ods && ods.length > 0 && (
-          <ul className="mt-4 flex flex-col gap-3">
-            {ods.map((od) => (
-              <li key={od.id} className="rounded-md border border-zinc-200 p-3 text-sm">
-                <div className="flex items-baseline justify-between">
-                  <span className="font-semibold">{od.category.name}</span>
-                  <span className="font-mono text-zinc-500">+{od.finalScore ?? 0}</span>
-                </div>
-                <p className="mt-1 text-zinc-600">{od.description}</p>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Raised by {od.raisedBy.name} &middot;{" "}
-                  {new Date(od.createdAt).toLocaleDateString()}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="flex-1 overflow-y-auto p-5">
+          {ods === null && <p className="text-sm text-faint">Pulling the record…</p>}
+          {ods && ods.length === 0 && (
+            <p className="text-sm text-muted">
+              Clean sheet. Nothing has been proved against {member.name} yet.
+            </p>
+          )}
+          {ods && ods.length > 0 && (
+            <ul className="flex flex-col gap-2.5">
+              {ods.map((od) => {
+                const guilty = (od.finalScore ?? 0) > 0;
+                return (
+                  <li key={od.id} className="rounded-xl border border-line p-3.5 text-sm">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="font-semibold">{od.category.name}</span>
+                      <span
+                        className={`shrink-0 font-mono text-xs font-bold tabular-nums ${
+                          guilty ? "text-od" : "text-clear"
+                        }`}
+                      >
+                        {guilty ? `+${od.finalScore}` : "cleared"}
+                      </span>
+                    </div>
+                    <p className="mt-1 leading-relaxed text-muted">{od.description}</p>
+                    <p className="mt-1.5 text-xs text-faint">
+                      Raised by {od.raisedBy.name} ·{" "}
+                      {new Date(od.createdAt).toLocaleDateString()}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

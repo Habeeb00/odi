@@ -77,7 +77,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
   }
 
   return NextResponse.json({
-    board,
+    // Only what the display needs. This endpoint is public — anyone with the
+    // board link polls it — so the row's joinCode/adminCode must not ride
+    // along, the way they used to when the whole board was spread in here.
+    board: { name: board.name, slug: board.slug },
     leaderboard,
     pendingCount,
     pendingOds,

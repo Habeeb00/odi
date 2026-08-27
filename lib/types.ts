@@ -70,3 +70,15 @@ export type OD = {
 };
 
 export type LeaderboardEntry = Member & { score: number };
+
+// One board as it appears in the rack (GET /api/boards) — the pile of heads
+// and the numbers under it, nothing secret.
+export type BoardSummary = {
+  name: string;
+  slug: string;
+  createdAt: string;
+  heads: { id: string; name: string; image: string | null }[];
+  totalOd: number;
+  closedCases: number;
+  openCases: number;
+};

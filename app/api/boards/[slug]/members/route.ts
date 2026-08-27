@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { parseMemberImageFields } from "@/lib/upload";
 import { memberImageUrl } from "@/lib/media";
 import { isAdminForBoard } from "@/lib/session";
+import { clientMessage } from "@/lib/apiError";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -17,11 +18,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       return NextResponse.json({ error: "Admin code required" }, { status: 401 });
     }
 
+    // Names are how you're addressed on the board, how you're picked at
+    // login, and how a verdict reads — two Amals make all three ambiguous.
+    const clash = await prisma.member.findFirst({
+      where: { boardId: board.id, name: { equals: name, mode: "insensitive" } },
+    });
+    if (clash) {
+      return NextResponse.json(
+        { error: `${clash.name} is already on this board — pick a different name` },
+        { status: 409 }
+      );
+    }
+
     let imageFields: Record<string, string>;
     try {
       imageFields = parseMemberImageFields(body);
     } catch (err) {
       return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    }
+    // A head with no face can't race, can't be judged, and can't be picked
+    // out of the tub at login. The admin adds the photo, not the member.
+    if (!imageFields.image) {
+      return NextResponse.json({ error: "A photo is required" }, { status: 400 });
     }
 
     const member = await prisma.member.create({
@@ -31,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   } catch (err) {
     console.error("POST /api/boards/[slug]/members failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to add member" },
+      { error: clientMessage(err, "Failed to add member") },
       { status: 500 }
     );
   }

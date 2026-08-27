@@ -4,9 +4,8 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useBoard } from "@/lib/useBoard";
 import { apiFetch, fileToDataUrl } from "@/lib/api";
-import { cropToFace } from "@/lib/faceCrop";
-import { generateMoodSticker } from "@/lib/moodSticker";
-import type { Asset, Board, Category, Member, OD } from "@/lib/types";
+import FaceRoster from "@/components/FaceRoster";
+import type { Asset, Board, Category, OD } from "@/lib/types";
 
 export default function AdminPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -27,31 +26,97 @@ export default function AdminPage({ params }: { params: Promise<{ slug: string }
 
   if (!board) return null;
 
+  const claimed = board.members.filter((m) => m.hasPassword).length;
+  // Three things stand between a fresh board and a working one. Named plainly
+  // so the admin can see what's left instead of guessing which panel to open.
+  const setup = [
+    {
+      done: board.members.length >= 2,
+      label: "Get the faces in",
+      hint: "Two heads minimum — you can't accuse yourself.",
+    },
+    {
+      done: board.members.length > 0 && board.members.every((m) => m.image),
+      label: "Give every head a photo",
+      hint: `${board.members.filter((m) => !m.image).length} still blank — a faceless head can't be picked out of the tub.`,
+    },
+    {
+      done: !!board.joinCode,
+      label: "Share the invite",
+      hint: "The link carries the join code, so nobody has to type it.",
+    },
+    {
+      done: claimed >= 2,
+      label: "Let them claim their names",
+      hint: `${claimed} of ${board.members.length} have picked a password.`,
+    },
+  ];
+  const remaining = setup.filter((s) => !s.done);
+
   return (
-    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Board admin</h1>
+    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b-2 border-ink pb-4">
+        <div>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-faint">
+            {board.name}
+          </span>
+          <h1 className="display text-3xl leading-none">Back of house</h1>
+        </div>
         <div className="flex items-center gap-4">
-          <ShareInviteButton slug={slug} board={board} />
-          <Link href={`/${slug}/admin/test`} className="text-sm underline">
-            Test mode →
+          <Link
+            href={`/${slug}/admin/test`}
+            className="text-sm text-muted underline decoration-line hover:text-ink"
+          >
+            Test mode
           </Link>
+          <ShareInviteButton slug={slug} board={board} />
         </div>
       </div>
 
-      <Section title="Members">
-        <MemberList slug={slug} members={board.members} onChange={refetch} />
+      {remaining.length > 0 && (
+        <ol className="mt-6 overflow-hidden rounded-2xl border border-line bg-surface">
+          {setup.map((step, i) => (
+            <li
+              key={step.label}
+              className={`flex items-baseline gap-3 px-5 py-3 ${i > 0 ? "border-t border-line" : ""}`}
+            >
+              <span
+                className={`font-mono text-xs ${step.done ? "text-clear" : "text-od"}`}
+                aria-hidden
+              >
+                {step.done ? "✓" : i + 1}
+              </span>
+              <div className="min-w-0">
+                <p className={`text-sm font-semibold ${step.done ? "text-faint line-through" : ""}`}>
+                  {step.label}
+                </p>
+                {!step.done && <p className="mt-0.5 text-xs text-muted">{step.hint}</p>}
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <Section
+        title="The tub"
+        description="Everyone on the board. Photos become the heads that race, get judged, and pull the rope."
+      >
+        <FaceRoster slug={slug} members={board.members} onChange={refetch} />
       </Section>
 
-      <Section title="Pending ODs">
+      <Section
+        title="Open cases"
+        description="Close a case early instead of waiting out the voting window."
+        badge={pendingOds.length || undefined}
+      >
         <PendingOdList ods={pendingOds} onChange={loadPendingOds} />
       </Section>
 
-      <Section title="Categories">
+      <Section title="Categories" description="The kinds of OD your group actually commits.">
         <CategoryList slug={slug} categories={board.categories} onChange={refetch} />
       </Section>
 
-      <Section title="Assets">
+      <Section title="Assets" description="Images and dialogue the display shows per category.">
         <AssetManager
           slug={slug}
           categories={board.categories}
@@ -60,7 +125,7 @@ export default function AdminPage({ params }: { params: Promise<{ slug: string }
         />
       </Section>
 
-      <Section title="Settings">
+      <Section title="Settings" description="Codes, voting window, and daily limits.">
         <SettingsForm slug={slug} board={board} onChange={refetch} />
       </Section>
     </main>
@@ -100,307 +165,41 @@ function ShareInviteButton({ slug, board }: { slug: string; board: Board }) {
     <div className="flex items-center gap-2">
       <button
         onClick={shareInvite}
-        className="rounded-md bg-black px-4 py-2 text-sm font-semibold text-white"
+        className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-paper"
       >
         {shared ? "Copied!" : "Share invite"}
       </button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-od">{error}</p>}
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-10">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">{title}</h2>
-      <div className="mt-3">{children}</div>
-    </section>
-  );
-}
-
-function MemberList({
-  slug,
-  members,
-  onChange,
+function Section({
+  title,
+  description,
+  badge,
+  children,
 }: {
-  slug: string;
-  members: Member[];
-  onChange: () => void;
+  title: string;
+  description?: string;
+  badge?: number;
+  children: React.ReactNode;
 }) {
-  const [name, setName] = useState("");
-  const [image, setImage] = useState<File | null>(null);
-  const [imageHappy, setImageHappy] = useState<File | null>(null);
-  const [imageSad, setImageSad] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageHappyPreview, setImageHappyPreview] = useState<string | null>(null);
-  const [imageSadPreview, setImageSadPreview] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
-  const [generatingKey, setGeneratingKey] = useState<string | null>(null);
-
-  function pickFile(
-    setFile: (f: File | null) => void,
-    preview: string | null,
-    setPreview: (p: string | null) => void
-  ) {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0] ?? null;
-      if (preview) URL.revokeObjectURL(preview);
-      setFile(file);
-      setPreview(file ? URL.createObjectURL(file) : null);
-    };
-  }
-
-  async function facePhoto(file: File): Promise<string> {
-    try {
-      return await cropToFace(file);
-    } catch {
-      return fileToDataUrl(file);
-    }
-  }
-
-  async function add(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const [imageDataUrl, imageHappyDataUrl, imageSadDataUrl] = await Promise.all([
-        image ? facePhoto(image) : undefined,
-        imageHappy ? facePhoto(imageHappy) : undefined,
-        imageSad ? facePhoto(imageSad) : undefined,
-      ]);
-      await apiFetch(`/api/boards/${slug}/members`, {
-        method: "POST",
-        body: JSON.stringify({ name, imageDataUrl, imageHappyDataUrl, imageSadDataUrl }),
-      });
-      setName("");
-      setImage(null);
-      setImageHappy(null);
-      setImageSad(null);
-      [imagePreview, imageHappyPreview, imageSadPreview].forEach((p) => p && URL.revokeObjectURL(p));
-      setImagePreview(null);
-      setImageHappyPreview(null);
-      setImageSadPreview(null);
-      onChange();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add member");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove(id: string) {
-    try {
-      await apiFetch(`/api/boards/${slug}/members/${id}`, { method: "DELETE" });
-      onChange();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove member");
-    }
-  }
-
-  async function resetPassword(id: string) {
-    try {
-      await apiFetch(`/api/boards/${slug}/members/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ resetPassword: true }),
-      });
-      onChange();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reset password");
-    }
-  }
-
-  async function setPhoto(id: string, field: "imageDataUrl" | "imageHappyDataUrl" | "imageSadDataUrl", file: File) {
-    setPhotoBusyId(id);
-    setError(null);
-    try {
-      const dataUrl = await facePhoto(file);
-      await apiFetch(`/api/boards/${slug}/members/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ [field]: dataUrl }),
-      });
-      onChange();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update photo");
-    } finally {
-      setPhotoBusyId(null);
-    }
-  }
-
-  async function generateMood(member: Member, mood: "happy" | "sad") {
-    if (!member.image) return;
-    const key = `${member.id}-${mood}`;
-    setGeneratingKey(key);
-    setError(null);
-    try {
-      const dataUrl = await generateMoodSticker(member.image, mood);
-      const field = mood === "happy" ? "imageHappyDataUrl" : "imageSadDataUrl";
-      await apiFetch(`/api/boards/${slug}/members/${member.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ [field]: dataUrl }),
-      });
-      onChange();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate photo");
-    } finally {
-      setGeneratingKey(null);
-    }
-  }
-
-  const PHOTO_SLOTS = [
-    { field: "imageDataUrl" as const, label: "Normal", pick: (m: Member) => m.image, mood: null },
-    {
-      field: "imageHappyDataUrl" as const,
-      label: "Laughing",
-      pick: (m: Member) => m.imageHappy,
-      mood: "happy" as const,
-    },
-    {
-      field: "imageSadDataUrl" as const,
-      label: "Crying",
-      pick: (m: Member) => m.imageSad,
-      mood: "sad" as const,
-    },
-  ];
-
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-sm text-zinc-500">
-        Each member can have three sticker photos — normal, laughing, and crying — shown on
-        the display depending on whether they&rsquo;re winning or losing the race. Upload just
-        the normal one and use &ldquo;✨ Auto&rdquo; under laughing/crying to generate the rest
-        (tints the photo and stamps an emoji on it — free, instant, no AI service needed).
-      </p>
-      {members.map((m) => (
-        <div
-          key={m.id}
-          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 px-4 py-2"
-        >
-          <div className="flex items-center gap-3">
-            {m.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.image} alt="" className="h-8 w-8 object-contain" />
-            ) : (
-              <span className="flex h-8 w-8 items-center justify-center bg-zinc-200 text-xs">
-                {m.name[0]?.toUpperCase()}
-              </span>
-            )}
-            <span>{m.name}</span>
-            <span className={`text-xs ${m.hasPassword ? "text-zinc-400" : "text-amber-600"}`}>
-              {m.hasPassword ? "joined" : "not joined yet"}
+    <section className="mt-6 overflow-hidden rounded-2xl border border-line bg-surface">
+      <div className="border-b border-line px-5 py-4">
+        <div className="flex items-center gap-2">
+          <h2 className="display text-lg leading-none">{title}</h2>
+          {badge !== undefined && (
+            <span className="rounded-full bg-od-soft px-2 py-0.5 text-[11px] font-bold text-od">
+              {badge}
             </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-4">
-            {PHOTO_SLOTS.map((slot) => {
-              const current = slot.pick(m);
-              const generating = slot.mood && generatingKey === `${m.id}-${slot.mood}`;
-              return (
-                <div key={slot.field} className="flex flex-col items-center gap-1">
-                  <label className="flex flex-col items-center gap-1 text-xs text-zinc-500 cursor-pointer">
-                    <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-50">
-                      {photoBusyId === m.id || generating ? (
-                        <span className="text-[10px] text-zinc-400">…</span>
-                      ) : current ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={current} alt={slot.label} className="h-full w-full object-contain" />
-                      ) : (
-                        <span className="text-lg text-zinc-300">+</span>
-                      )}
-                    </span>
-                    {slot.label}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      disabled={photoBusyId === m.id}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) setPhoto(m.id, slot.field, file);
-                        e.target.value = "";
-                      }}
-                    />
-                  </label>
-                  {slot.mood && m.image && (
-                    <button
-                      onClick={() => generateMood(m, slot.mood as "happy" | "sad")}
-                      disabled={!!generatingKey}
-                      className="text-[10px] text-zinc-400 underline disabled:opacity-50"
-                      title="Tint the normal photo and stamp an emoji on it"
-                    >
-                      {generating ? "Generating…" : "✨ Auto"}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-            {m.hasPassword && (
-              <button onClick={() => resetPassword(m.id)} className="text-sm text-zinc-500 underline">
-                Reset password
-              </button>
-            )}
-            <button onClick={() => remove(m.id)} className="text-sm text-red-600">
-              Remove
-            </button>
-          </div>
+          )}
         </div>
-      ))}
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <form onSubmit={add} className="flex flex-col gap-3 rounded-md border border-zinc-200 p-3">
-        <input
-          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
-          placeholder="Member name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <div className="flex flex-wrap gap-4">
-          <PhotoPickField
-            label="Normal photo"
-            preview={imagePreview}
-            onPick={pickFile(setImage, imagePreview, setImagePreview)}
-          />
-          <PhotoPickField
-            label="Laughing photo (optional)"
-            preview={imageHappyPreview}
-            onPick={pickFile(setImageHappy, imageHappyPreview, setImageHappyPreview)}
-          />
-          <PhotoPickField
-            label="Crying photo (optional)"
-            preview={imageSadPreview}
-            onPick={pickFile(setImageSad, imageSadPreview, setImageSadPreview)}
-          />
-        </div>
-        <button disabled={busy} className="self-start rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium">
-          Add
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function PhotoPickField({
-  label,
-  preview,
-  onPick,
-}: {
-  label: string;
-  preview: string | null;
-  onPick: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}) {
-  return (
-    <label className="flex flex-col items-center gap-1 text-xs text-zinc-500 cursor-pointer">
-      <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-50">
-        {preview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt={label} className="h-full w-full object-contain" />
-        ) : (
-          <span className="text-lg text-zinc-300">+</span>
-        )}
-      </span>
-      {label}
-      <input type="file" accept="image/*" className="hidden" onChange={onPick} />
-    </label>
+        {description && <p className="mt-1 text-xs text-muted">{description}</p>}
+      </div>
+      <div className="p-5">{children}</div>
+    </section>
   );
 }
 
@@ -421,7 +220,7 @@ function PendingOdList({ ods, onChange }: { ods: OD[]; onChange: () => void }) {
   }
 
   if (ods.length === 0) {
-    return <p className="text-sm text-zinc-500">No pending ODs.</p>;
+    return <p className="text-sm text-muted">No pending ODs.</p>;
   }
 
   return (
@@ -429,18 +228,18 @@ function PendingOdList({ ods, onChange }: { ods: OD[]; onChange: () => void }) {
       {ods.map((od) => (
         <div
           key={od.id}
-          className="flex items-center justify-between gap-4 rounded-md border border-zinc-200 px-4 py-2"
+          className="flex items-center justify-between gap-4 rounded-lg border border-line px-4 py-2"
         >
           <div>
             <p className="text-sm">
               <strong>{od.raisedBy.name}</strong> vs <strong>{od.accused.name}</strong> — {od.category.name}
             </p>
-            <p className="text-xs text-zinc-500">{od.description}</p>
+            <p className="text-xs text-muted">{od.description}</p>
           </div>
           <button
             onClick={() => close(od.id)}
             disabled={busyId === od.id}
-            className="shrink-0 rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium"
+            className="shrink-0 rounded-lg border border-line px-3 py-2 text-sm font-medium"
           >
             Close now
           </button>
@@ -481,21 +280,21 @@ function CategoryList({
     <div className="flex flex-col gap-3">
       <ul className="flex flex-wrap gap-2">
         {categories.map((c) => (
-          <li key={c.id} className="rounded-full border border-zinc-300 px-3 py-1 text-sm">
+          <li key={c.id} className="rounded-full border border-line px-3 py-1 text-sm">
             {c.name}
           </li>
         ))}
       </ul>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-od">{error}</p>}
       <form onSubmit={add} className="flex gap-2">
         <input
-          className="flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2"
+          className="flex-1 rounded-lg border border-line bg-transparent px-3 py-2"
           placeholder="New category name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
-        <button className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium">Add</button>
+        <button className="rounded-lg border border-line px-3 py-2 text-sm font-medium">Add</button>
       </form>
     </div>
   );
@@ -547,20 +346,22 @@ function AssetManager({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-zinc-500">
-        Upload the developer-provided images/dialogues shown on the display for each category.
-      </p>
+      {assets.length === 0 && (
+        <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-faint">
+          No assets yet. The display just shows the description on its own.
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         {assets.map((a) => (
-          <div key={a.id} className="flex flex-col gap-2 rounded-md border border-zinc-200 p-3">
+          <div key={a.id} className="flex flex-col gap-2 rounded-lg border border-line p-3">
             {a.file && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={a.file} alt="" className="h-32 w-full rounded-md object-cover" />
+              <img src={a.file} alt="" className="h-32 w-full rounded-lg object-cover" />
             )}
             {a.dialogue && <p className="text-sm italic">&ldquo;{a.dialogue}&rdquo;</p>}
-            <div className="flex items-center justify-between text-xs text-zinc-500">
+            <div className="flex items-center justify-between text-xs text-muted">
               <span>{a.severity ?? "any severity"}</span>
-              <button onClick={() => remove(a.id)} className="text-red-600">
+              <button onClick={() => remove(a.id)} className="text-od">
                 Remove
               </button>
             </div>
@@ -568,11 +369,11 @@ function AssetManager({
         ))}
       </div>
 
-      <form onSubmit={add} className="flex flex-col gap-2 rounded-md border border-zinc-200 p-4">
+      <form onSubmit={add} className="flex flex-col gap-2 rounded-lg border border-line p-4">
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
-          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
+          className="rounded-lg border border-line bg-transparent px-3 py-2"
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -582,7 +383,7 @@ function AssetManager({
         </select>
         <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <input
-          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
+          className="rounded-lg border border-line bg-transparent px-3 py-2"
           placeholder="Dialogue (optional)"
           value={dialogue}
           onChange={(e) => setDialogue(e.target.value)}
@@ -590,15 +391,15 @@ function AssetManager({
         <select
           value={severity}
           onChange={(e) => setSeverity(e.target.value)}
-          className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
+          className="rounded-lg border border-line bg-transparent px-3 py-2"
         >
           <option value="">Any severity</option>
           <option value="MILD">Mild</option>
           <option value="MEDIUM">Medium</option>
           <option value="SEVERE">Severe</option>
         </select>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button disabled={busy} className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium">
+        {error && <p className="text-sm text-od">{error}</p>}
+        <button disabled={busy} className="rounded-lg border border-line px-3 py-2 text-sm font-medium">
           Add asset
         </button>
       </form>
@@ -673,31 +474,31 @@ function SettingsForm({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line px-4 py-3">
         <span className="text-sm">Join code:</span>
         <span className="font-mono font-bold tracking-widest">{board.joinCode ?? "not set"}</span>
         <button
           onClick={regenerateJoinCode}
           disabled={regenerating}
-          className="ml-auto rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="ml-auto rounded-lg border border-line px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           {regenerating ? "Generating..." : board.joinCode ? "Regenerate" : "Generate"}
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line px-4 py-3">
         <span className="text-sm">Admin code:</span>
         <span className="font-mono font-bold tracking-widest">{newAdminCode ?? "hidden"}</span>
         <button
           onClick={regenerateAdminCode}
           disabled={regeneratingAdmin}
-          className="ml-auto rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="ml-auto rounded-lg border border-line px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           {regeneratingAdmin ? "Generating..." : "Regenerate"}
         </button>
       </div>
       {newAdminCode && (
-        <p className="-mt-2 text-xs text-zinc-500">
+        <p className="-mt-2 text-xs text-muted">
           Save this now — it won&rsquo;t be shown again after you leave this page.
         </p>
       )}
@@ -710,7 +511,7 @@ function SettingsForm({
             min={1}
             value={votingDurationHours}
             onChange={(e) => setVotingDurationHours(Number(e.target.value))}
-            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
+            className="rounded-lg border border-line bg-transparent px-3 py-2"
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -720,13 +521,13 @@ function SettingsForm({
             min={1}
             value={dailyOdLimit}
             onChange={(e) => setDailyOdLimit(Number(e.target.value))}
-            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2"
+            className="rounded-lg border border-line bg-transparent px-3 py-2"
           />
         </label>
-        <button className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium">Save</button>
-        {saved && <span className="text-sm text-zinc-500">Saved.</span>}
+        <button className="rounded-lg border border-line px-3 py-2 text-sm font-medium">Save</button>
+        {saved && <span className="text-sm text-muted">Saved.</span>}
       </form>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-od">{error}</p>}
     </div>
   );
 }

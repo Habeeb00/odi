@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { closeExpiredOds } from "@/lib/od";
 import { VOTE_CHOICES } from "@/lib/scoring";
 import { getMemberIdForBoard } from "@/lib/session";
+import { clientMessage } from "@/lib/apiError";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ odId: string }> }) {
   try {
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ odI
   } catch (err) {
     console.error("POST /api/ods/[odId]/vote failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to record vote" },
+      { error: clientMessage(err, "Failed to record vote") },
       { status: 500 }
     );
   }

@@ -3,7 +3,7 @@
 // is handled by the caller appending "-2", "-3", etc. on collision. Reserved
 // slugs must also go through that fallback so a board never shadows a real
 // top-level route (they'd otherwise 404 instead of falling back to /[slug]).
-export const RESERVED_SLUGS = new Set(["api", "favicon.ico"]);
+export const RESERVED_SLUGS = new Set(["api", "boards", "favicon.ico"]);
 
 export function slugify(name: string): string {
   const base = name

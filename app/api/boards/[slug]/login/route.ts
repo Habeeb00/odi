@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { normalizeJoinCode } from "@/lib/joinCode";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { withMember } from "@/lib/session";
+import { clientMessage } from "@/lib/apiError";
 
 // Two flows share this endpoint, told apart by whether the picked member
 // already has a passwordHash:
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   } catch (err) {
     console.error("POST /api/boards/[slug]/login failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to log in" },
+      { error: clientMessage(err, "Failed to log in") },
       { status: 500 }
     );
   }

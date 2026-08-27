@@ -70,34 +70,58 @@ function sessionCookie(session: Session) {
   };
 }
 
-// Both take a NextResponse-like object exposing .cookies.set (NextResponse does).
+// All three take a NextResponse-like object exposing .cookies (NextResponse
+// does). They're written to compose: admin/verify and board creation each
+// call two of them on one response, and each has to build on what the
+// previous call already wrote. Reading only from the *request* meant the
+// second call silently discarded the first's grant — which is how verifying
+// the admin code used to leave `admins: []` in the cookie, unlocking the
+// admin UI while every admin write came back 401.
+type SessionResponse = {
+  cookies: {
+    set: (opts: ReturnType<typeof sessionCookie>) => void;
+    get: (name: string) => { value: string } | undefined;
+  };
+};
+
+function pendingSession(res: SessionResponse, req: NextRequest): Session {
+  const staged = res.cookies.get(COOKIE_NAME)?.value;
+  if (staged) {
+    const payload = unsign(staged);
+    if (payload) {
+      try {
+        const parsed = JSON.parse(payload);
+        return {
+          members: typeof parsed.members === "object" && parsed.members ? parsed.members : {},
+          admins: Array.isArray(parsed.admins) ? parsed.admins : [],
+        };
+      } catch {
+        // Fall through to the request's session.
+      }
+    }
+  }
+  return getSession(req);
+}
+
 export function withMember(
-  res: { cookies: { set: (opts: ReturnType<typeof sessionCookie>) => void } },
+  res: SessionResponse,
   req: NextRequest,
   boardId: string,
   memberId: string
 ) {
-  const session = getSession(req);
+  const session = pendingSession(res, req);
   session.members[boardId] = memberId;
   res.cookies.set(sessionCookie(session));
 }
 
-export function withoutMember(
-  res: { cookies: { set: (opts: ReturnType<typeof sessionCookie>) => void } },
-  req: NextRequest,
-  boardId: string
-) {
-  const session = getSession(req);
+export function withoutMember(res: SessionResponse, req: NextRequest, boardId: string) {
+  const session = pendingSession(res, req);
   delete session.members[boardId];
   res.cookies.set(sessionCookie(session));
 }
 
-export function withAdmin(
-  res: { cookies: { set: (opts: ReturnType<typeof sessionCookie>) => void } },
-  req: NextRequest,
-  boardId: string
-) {
-  const session = getSession(req);
+export function withAdmin(res: SessionResponse, req: NextRequest, boardId: string) {
+  const session = pendingSession(res, req);
   if (!session.admins.includes(boardId)) session.admins.push(boardId);
   res.cookies.set(sessionCookie(session));
 }

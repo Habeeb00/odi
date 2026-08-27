@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { parseMemberImageFields } from "@/lib/upload";
 import { memberImageUrl } from "@/lib/media";
 import { isAdminForBoard } from "@/lib/session";
+import { clientMessage } from "@/lib/apiError";
 
 export async function PATCH(
   req: NextRequest,
@@ -19,7 +20,24 @@ export async function PATCH(
     const body = await req.json();
     const data: Record<string, unknown> = {};
 
-    if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();
+    if (typeof body.name === "string" && body.name.trim()) {
+      const name = body.name.trim();
+      // Same one-name-per-board rule as adding a member, minus this member.
+      const clash = await prisma.member.findFirst({
+        where: {
+          boardId: existing.boardId,
+          id: { not: memberId },
+          name: { equals: name, mode: "insensitive" },
+        },
+      });
+      if (clash) {
+        return NextResponse.json(
+          { error: `${clash.name} is already on this board` },
+          { status: 409 }
+        );
+      }
+      data.name = name;
+    }
     try {
       Object.assign(data, parseMemberImageFields(body));
     } catch (err) {
@@ -35,7 +53,7 @@ export async function PATCH(
   } catch (err) {
     console.error("PATCH /api/boards/[slug]/members/[memberId] failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to update member" },
+      { error: clientMessage(err, "Failed to update member") },
       { status: 500 }
     );
   }
@@ -58,7 +76,7 @@ export async function DELETE(
   } catch (err) {
     console.error("DELETE /api/boards/[slug]/members/[memberId] failed", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to remove member" },
+      { error: clientMessage(err, "Failed to remove member") },
       { status: 500 }
     );
   }
